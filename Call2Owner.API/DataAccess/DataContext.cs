@@ -2,6 +2,7 @@
 using System.Data;
 using Oversight.Model;
 using Oversight.Models;
+using Oversight.DTO;
 
 namespace Oversight
 {
@@ -16,6 +17,13 @@ namespace Oversight
         public virtual DbSet<RoleClaim> RoleClaims { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserParent> UserParents { get; set; } = null!;
+
+        public virtual DbSet<Society> Society { get; set; } = null!;
+        public virtual DbSet<SocietyDocumentRequiredToRegister> SocietyDocumentRequiredToRegister { get; set; } = null!;
+        public virtual DbSet<SocietyDocumentUploaded> SocietyDocumentUploaded { get; set; } = null!;
+        public virtual DbSet<SocietyFlat> SocietyFlat { get; set; } = null!;
+        public virtual DbSet<SocietyBuilding> SocietyBuilding { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Oversight.Controllers;
 using Oversight.DTO;
 using Oversight.Model;
 
@@ -31,6 +32,15 @@ namespace Oversight
                 .ForMember(dest => dest.ParentRoleId, opt => opt.MapFrom(src => src.ParentRoleId))
                 .ForMember(dest => dest.ParentRoleName, opt => opt.MapFrom(src => src.ParentRole != null ? src.ParentRole.RoleName : null))
                 .ForMember(dest => dest.RoleClaims, opt => opt.MapFrom(src => src.RoleClaims));
+
+            CreateMap<Society, SocietyApprovalDto>().ReverseMap();
+            CreateMap<Society, SocietyDto>().ReverseMap();
+
+            CreateMap<SocietyDocumentRequiredToRegister, SocietyDocumentRequiredToRegisterDTO>().ReverseMap();
+            CreateMap<SocietyDocumentUploaded, SocietyDocumentUploadedDTO>().ReverseMap();
+
+            CreateMap<SocietyFlat, SocietyFlatDTO>().ReverseMap();
+            CreateMap<SocietyBuilding, SocietyBuildingCTO>().ReverseMap();
         }
     }
 }
