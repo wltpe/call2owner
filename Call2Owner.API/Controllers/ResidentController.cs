@@ -216,6 +216,154 @@ namespace Oversight.Controllers
             return Ok(new { message = "OTP sent successfully!" });
         }
 
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginSelfDto model)
+        {
+            _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
+
+            var user = await _context.Users
+                .Include(u => u.Role)
+                    .ThenInclude(r => r.RoleClaims)
+                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);
+
+            if (user == null)
+                return Unauthorized(new { message = "Invalid user credentials." });
+
+            if (!user.IsActive.GetValueOrDefault() || !user.IsVerified.GetValueOrDefault())
+                return Unauthorized(new { message = "Account is not active or verified. Please contact support." });
+
+            // ✅ OTP Validation
+            if (user.OTP != model.OTP || user.OtpExpireTime < DateTime.UtcNow)
+                return Unauthorized(new { message = "Invalid or expired OTP." });
+
+            // ✅ Clear OTP after successful login (optional but recommended)
+            user.OTP = null;
+            user.OtpValidatedOn = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            // ✅ Get RoleClaims
+            var roleClaimValues = user.Role?.RoleClaims
+                                    .OrderBy(rc => rc.Id)
+                                    .Select(rc => rc.ModulePermissionsJson.ToString())
+                                    .FirstOrDefault();
+
+            // ✅ Generate JWT Token
+            var token = GenerateJwtToken(user, roleClaimValues);
+
+            var userDto = _mapper.Map<UserDto>(user);
+
+            object insurerData = null; // Placeholder for future logic
+
+            return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-country")]
+        public async Task<ActionResult<IEnumerable<CountryDto>>> GetAllCountry()
+        {
+            var countries = await _context.Country
+                .Where(s => s.IsDeleted != true && s.IsActive == true)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<CountryDto>>(countries));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-state-by-country-id")]
+        public async Task<ActionResult<IEnumerable<StateDto>>> GetAllStateByCountryId(int CountryId)
+        {
+            var states = await _context.State
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.CountryId == CountryId)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<StateDto>>(states));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-city-by-state-id")]
+        public async Task<ActionResult<IEnumerable<CityDto>>> GetAllCityByStateId(int StateId)
+        {
+            var cities = await _context.City
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.StateId == StateId)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<CityDto>>(cities));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-society")]
+        public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSociety()
+        {
+            var societies = await _context.Society
+                .Where(s => s.IsDeleted != true && s.IsActive == true)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<SocietyDto>>(societies));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-Building-by-society-id")]
+        public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(int SocietyId)
+        {
+            var societyBuildings = await _context.SocietyBuilding
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyId == SocietyId)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<SocietyBuildingDTO>>(societyBuildings));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("get-all-flats-by-society-building-id")]
+        public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(int SocietyBuildingId)
+        {
+            var societyBuildingFlats = await _context.SocietyFlat
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyBuildingId == SocietyBuildingId)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<SocietyFlatDTO>>(societyBuildingFlats));
+        }
+
+        private string GenerateJwtToken(User user, string modulePermissions)
+        {
+            var jwtKey = _configuration["JwtSettings:Key"];
+            var jwtIssuer = _configuration["JwtSettings:Issuer"];
+            var jwtAudience = _configuration["JwtSettings:Audience"];
+            var expiryMinutes = _configuration["JwtSettings:ExpiryMinutes"];
+
+            if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience) || string.IsNullOrEmpty(expiryMinutes))
+                throw new InvalidOperationException("JWT settings are not configured properly.");
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role?.Id.ToString() ?? "0"),
+                    new Claim("FirstName", user.FirstName ?? ""),
+                    new Claim("LastName", user.LastName ?? ""),
+                    new Claim("MobileNumber", user.MobileNumber ?? ""),
+                    new Claim("UserId", user.Id.ToString()),
+                    new Claim("RoleName", user.Role?.RoleName ?? "User")
+                };
+
+            claims.Add(new Claim("Permissions", string.IsNullOrWhiteSpace(modulePermissions) ? "" : modulePermissions));
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(int.Parse(expiryMinutes)),
+                Issuer = jwtIssuer,
+                Audience = jwtAudience,
+                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
         private async Task<string> SendOtpAsync(string number, string message)
         {
             try
