@@ -21,8 +21,11 @@ namespace Oversight
         public virtual DbSet<Society> Society { get; set; } = null!;
         public virtual DbSet<SocietyDocumentRequiredToRegister> SocietyDocumentRequiredToRegister { get; set; } = null!;
         public virtual DbSet<SocietyDocumentUploaded> SocietyDocumentUploaded { get; set; } = null!;
-        public virtual DbSet<SocietyFlat> SocietyFlat { get; set; } = null!;
         public virtual DbSet<SocietyBuilding> SocietyBuilding { get; set; } = null!;
+        public virtual DbSet<SocietyFlat> SocietyFlat { get; set; } = null!;
+        public virtual DbSet<Country> Country { get; set; } = null!;
+        public virtual DbSet<State> State { get; set; } = null!;
+        public virtual DbSet<City> City { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
