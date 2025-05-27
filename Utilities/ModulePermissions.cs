@@ -20,27 +20,31 @@ namespace Utilities
         public const string SocietyAdmin = "303";
         public const string Resident = "304";
         public const string Guest = "305";
-
     }
 
     public class Module
     {
-        public const string Society = "1";
-        public const string VehicleTag = "2";
-        public const string VehicleQRScan = "3";
-        public const string UserManagement = "4";
+        public const string Society = "101";
+        public const string SocietyBuilding = "102";
+        public const string SocietyDocument = "103";
+        public const string SocietyDocumentUploaded = "104";
+        public const string SocietyFlats = "105";
+        public const string VehicleTag = "106";
+        public const string VehicleQRScan = "107";
+        public const string UserManagement = "108";
+        public const string Resident = "109";
     }
 
     public class Permission
     {
-        public const string Add = "1";
-        public const string Update = "2";
-        public const string Delete = "3";
-        public const string GetById = "4";
-        public const string GetAll = "5";
-        public const string VerifyDocument = "6";
-        public const string VerifySociety = "7";
-        public const string ResendVerificationEmail = "10";
-        public const string ForgetEmailPwd = "11";
+        public const string Add = "201";
+        public const string Update = "202";
+        public const string Delete = "203";
+        public const string GetById = "204";
+        public const string GetAll = "205";
+        public const string VerifyDocument = "206";
+        public const string VerifySociety = "207";
+        public const string ResendVerificationEmail = "208";
+        public const string ForgetEmailPwd = "209";
     }
 }
