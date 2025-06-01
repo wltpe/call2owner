@@ -48,9 +48,6 @@ namespace Oversight.Controllers
             _client = client;
         }
 
-        [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.Add)]
-        [Authorize]
         [AllowAnonymous]
         [HttpPost("register-self-resident")]
         public async Task<IActionResult> SelfRegisterResident([FromBody] UserResidentDto dto)
@@ -104,10 +101,8 @@ namespace Oversight.Controllers
             return Ok(new { message = "OTP sent successfully!" });
         }
 
-        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Module.Resident)]
         [Authorize(Policy = Utilities.Permission.Add)]
-        [Authorize]
-        [AllowAnonymous]
         [HttpPost("register-admin-resident")]
         public async Task<IActionResult> AdminRegisterResident([FromBody] UserResidentDto dto)
         {
