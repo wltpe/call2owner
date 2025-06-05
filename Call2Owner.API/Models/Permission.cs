@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Oversight.Model
+namespace Call2Owner.Models;
+
+public partial class Permissions
 {
-    public partial class Permission
-    {
-        public int Id { get; set; }
-        public string PermissionName { get; set; } = null!;
-    }
+    public int Id { get; set; }
+
+    public string PermissionName { get; set; } = null!;
 }

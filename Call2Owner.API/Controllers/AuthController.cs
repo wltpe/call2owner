@@ -6,9 +6,9 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using Oversight.DTO;
-using Oversight.Model;
-using Oversight.Models;
+using Call2Owner.DTO;
+//using Oversight.Model;
+using Call2Owner.Model;
 using Oversight.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
@@ -66,12 +66,12 @@ namespace Oversight.Controllers
 
         public async Task<IActionResult> Register([FromBody] UserDto model)
         {
-            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            if (currentUserId == 0)
+            if (currentUserId == "0")
                 return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
+            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
             if (currentUser == null)
                 return Unauthorized(new { message = "User not found or unauthorized." });
 
@@ -114,7 +114,7 @@ namespace Oversight.Controllers
 
 
             string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
-            var user = new User
+            var user = new users
             {
                 FirstName = model.FirstName,
                 LastName = model.LastName,
@@ -140,7 +140,7 @@ namespace Oversight.Controllers
                 var insurerToSendDTO = new InsurerUserDTO
                 {
                     UserId = user.Id,
-                    InsurerId = currentUserId,
+                    InsurerId = Guid.Parse(currentUserId),
                     IsActive = user.IsActive ?? false,
                     IsDeleted = user.IsDeleted ?? false
                 };
@@ -889,7 +889,7 @@ namespace Oversight.Controllers
 
             var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.Guid()),
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(ClaimTypes.Role, user.Role?.Id.ToString() ?? "0"),
                     new Claim("FirstName", user.FirstName ?? ""),

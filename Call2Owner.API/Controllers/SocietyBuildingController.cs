@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Oversight.DTO;
-using Oversight.Model;
+using Call2Owner.DTO;
+using Call2Owner.Models;
 
 namespace Oversight.Controllers
 {
@@ -20,27 +20,27 @@ namespace Oversight.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SocietyBuildingCTO>>> GetAll()
+        public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAll()
         {
             var entities = await _context.SocietyBuilding
                 .Where(x => x.IsDeleted != true)
                 .ToListAsync();
 
-            return Ok(_mapper.Map<List<SocietyBuildingCTO>>(entities));
+            return Ok(_mapper.Map<List<SocietyBuildingDTO>>(entities));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SocietyBuildingCTO>> GetById(int id)
+        public async Task<ActionResult<SocietyBuildingDTO>> GetById(int id)
         {
             var entity = await _context.SocietyBuilding.FindAsync(id);
             if (entity == null || entity.IsDeleted == true)
                 return NotFound();
 
-            return Ok(_mapper.Map<SocietyBuildingCTO>(entity));
+            return Ok(_mapper.Map<SocietyBuildingDTO>(entity));
         }
 
         [HttpPost]
-        public async Task<ActionResult<SocietyBuildingCTO>> Create(SocietyBuildingCTO cto)
+        public async Task<ActionResult<SocietyBuildingDTO>> Create(SocietyBuildingDTO cto)
         {
             var entity = _mapper.Map<SocietyBuilding>(cto);
             entity.CreatedOn = DateTime.UtcNow;
@@ -54,7 +54,7 @@ namespace Oversight.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, SocietyBuildingCTO cto)
+        public async Task<IActionResult> Update(Guid id, SocietyBuildingDTO cto)
         {
             if (id != cto.Id)
                 return BadRequest();

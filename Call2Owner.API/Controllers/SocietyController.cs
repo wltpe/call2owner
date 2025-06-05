@@ -6,9 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using Oversight.DTO;
-using Oversight.Model;
-using Oversight.Models;
+using Call2Owner.DTO;
+using Call2Owner.Models;
 using Oversight.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
@@ -77,7 +76,7 @@ namespace Oversight.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, SocietyDto dto)
+        public async Task<IActionResult> Update(Guid id, SocietyDto dto)
         {
             if (id != dto.Id)
                 return BadRequest();

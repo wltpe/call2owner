@@ -1,25 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Oversight.Model
+namespace Call2Owner.Models;
+
+public partial class Role
 {
-    public partial class Role
-    {
-        public Role()
-        {
-            InverseParentRole = new HashSet<Role>();
-            RoleClaims = new HashSet<RoleClaim>();
-            Users = new HashSet<User>();
-        }
+    public int Id { get; set; }
 
-        public int Id { get; set; }
-        public string RoleName { get; set; } = null!;
-        public int? ParentRoleId { get; set; }
-        public string? DisplayName { get; set; }
+    public string RoleName { get; set; } = null!;
 
-        public virtual Role? ParentRole { get; set; }
-        public virtual ICollection<Role> InverseParentRole { get; set; }
-        public virtual ICollection<RoleClaim> RoleClaims { get; set; }
-        public virtual ICollection<User> Users { get; set; }
-    }
+    public int? ParentRoleId { get; set; }
+
+    public string? DisplayName { get; set; }
+
+    public virtual ICollection<Role> InverseParentRole { get; set; } = new List<Role>();
+
+    public virtual Role? ParentRole { get; set; }
+
+    public virtual ICollection<RoleClaim> RoleClaims { get; set; } = new List<RoleClaim>();
+
+    public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

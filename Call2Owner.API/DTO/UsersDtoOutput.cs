@@ -1,9 +1,9 @@
-﻿namespace Oversight.DTO
+﻿namespace Call2Owner.DTO
 {
     public class UsersDtoOutput
     {
-        public int Id { get; set; }
-        public int userId { get; set; }
+        public Guid Id { get; set; }
+        public Guid userId { get; set; }
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
         public string Email { get; set; } = null!;

@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Oversight.DTO
+namespace Call2Owner.DTO
 {
     public class UserDto
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         [Required]
         public string? FirstName { get; set; }
 

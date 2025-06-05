@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace db_test.Models;
 
 public partial class Society
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public int CountryId { get; set; }
 
@@ -41,13 +41,25 @@ public partial class Society
 
     public DateTime? CreatedOn { get; set; }
 
-    public string UpdatedBy { get; set; } = null!;
+    public string? UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
 
     public bool? IsDeleted { get; set; }
 
-    public string DeletedBy { get; set; } = null!;
+    public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
+    public virtual City City { get; set; } = null!;
+
+    public virtual Country Country { get; set; } = null!;
+
+    public virtual ICollection<SocietyBuilding> SocietyBuildings { get; set; } = new List<SocietyBuilding>();
+
+    public virtual ICollection<SocietyDocumentUploaded> SocietyDocumentUploadeds { get; set; } = new List<SocietyDocumentUploaded>();
+
+    public virtual ICollection<SocietyFlat> SocietyFlats { get; set; } = new List<SocietyFlat>();
+
+    public virtual State State { get; set; } = null!;
 }

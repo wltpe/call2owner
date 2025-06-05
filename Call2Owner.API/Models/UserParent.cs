@@ -1,18 +1,33 @@
-﻿using Oversight.Model;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
 
-namespace Oversight.Models
+namespace Call2Owner.Models;
+
+public partial class UserParent
 {
-    [Table("UserParent")]
-    public class UserParent : BaseModel
-    {
-        [Key]
-        public int Id { get; set; }
-        public int UserId { get; set; }
-        public int ParentId { get; set; }
-        [JsonIgnore]
-        public virtual User Users { get; set; } = null!;
-    }
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public int ParentId { get; set; }
+
+    public bool? IsVerified { get; set; }
+
+    public bool IsActive { get; set; }
+
+    public string CreatedBy { get; set; } = null!;
+
+    public DateTime? CreatedOn { get; set; }
+
+    public string? UpdatedBy { get; set; }
+
+    public DateTime? UpdatedOn { get; set; }
+
+    public bool? IsDeleted { get; set; }
+
+    public string? DeletedBy { get; set; }
+
+    public DateTime? DeletedOn { get; set; }
+
+    public virtual User User { get; set; } = null!;
 }

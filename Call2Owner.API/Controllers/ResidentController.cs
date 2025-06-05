@@ -6,9 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using Oversight.DTO;
-using Oversight.Model;
-using Oversight.Models;
+using Call2Owner.DTO;
+using Call2Owner.Models;
 using Oversight.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
@@ -66,7 +65,7 @@ namespace Oversight.Controllers
             if (existingUser != null)
             {
                 // Update OTP for existing user
-                existingUser.OTP = otp;
+                existingUser.Otp = otp;
                 existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
                 existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
                 existingUser.IsActive = true;
@@ -81,7 +80,7 @@ namespace Oversight.Controllers
                 var newUser = new User
                 {
                     MobileNumber = dto.MobileNumber,
-                    OTP = otp,
+                    Otp = otp,
                     OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
                     ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
                     RoleId = Convert.ToInt32(UserRoles.Resident),
@@ -120,7 +119,7 @@ namespace Oversight.Controllers
             if (existingUser != null)
             {
                 // Update OTP for existing user
-                existingUser.OTP = otp;
+                existingUser.Otp = otp;
                 existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
                 existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
                 existingUser.IsActive = true;
@@ -135,7 +134,7 @@ namespace Oversight.Controllers
                 var newUser = new User
                 {
                     MobileNumber = dto.MobileNumber,
-                    OTP = otp,
+                    Otp = otp,
                     OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
                     ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
                     RoleId = Convert.ToInt32(UserRoles.Resident),
@@ -176,7 +175,7 @@ namespace Oversight.Controllers
             if (existingUser != null)
             {
                 // Update OTP for existing user
-                existingUser.OTP = otp;
+                existingUser.Otp = otp;
                 existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
                 existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
                 existingUser.IsActive = true;
@@ -191,7 +190,7 @@ namespace Oversight.Controllers
                 var newUser = new User
                 {
                     MobileNumber = dto.MobileNumber,
-                    OTP = otp,
+                    Otp = otp,
                     OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
                     ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
                     RoleId = Convert.ToInt32(UserRoles.Resident),
@@ -229,11 +228,11 @@ namespace Oversight.Controllers
                 return Unauthorized(new { message = "Account is not active or verified. Please contact support." });
 
             // ✅ OTP Validation
-            if (user.OTP != model.OTP || user.OtpExpireTime < DateTime.UtcNow)
+            if (user.Otp != model.OTP || user.OtpExpireTime < DateTime.UtcNow)
                 return Unauthorized(new { message = "Invalid or expired OTP." });
 
             // ✅ Clear OTP after successful login (optional but recommended)
-            user.OTP = null;
+            user.Otp = null;
             user.OtpValidatedOn = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -299,7 +298,7 @@ namespace Oversight.Controllers
 
         [AllowAnonymous]
         [HttpGet("get-all-Building-by-society-id")]
-        public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(int SocietyId)
+        public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(Guid SocietyId)
         {
             var societyBuildings = await _context.SocietyBuilding
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyId == SocietyId)
@@ -310,7 +309,7 @@ namespace Oversight.Controllers
 
         [AllowAnonymous]
         [HttpGet("get-all-flats-by-society-building-id")]
-        public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(int SocietyBuildingId)
+        public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(Guid SocietyBuildingId)
         {
             var societyBuildingFlats = await _context.SocietyFlat
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyBuildingId == SocietyBuildingId)

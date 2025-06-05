@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace db_test.Models;
 
 public partial class SocietyDocumentUploaded
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int SocietyId { get; set; }
+    public Guid SocietyId { get; set; }
 
-    public int SocietyDocumentRequiredToRegisterId { get; set; }
+    public Guid SocietyDocumentRequiredToRegisterId { get; set; }
 
     public string Name { get; set; } = null!;
 
@@ -21,13 +21,17 @@ public partial class SocietyDocumentUploaded
 
     public DateTime? CreatedOn { get; set; }
 
-    public string UpdatedBy { get; set; } = null!;
+    public string? UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
 
     public bool? IsDeleted { get; set; }
 
-    public string DeletedBy { get; set; } = null!;
+    public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
+    public virtual Society Society { get; set; } = null!;
+
+    public virtual SocietyDocumentRequiredToRegister SocietyDocumentRequiredToRegister { get; set; } = null!;
 }

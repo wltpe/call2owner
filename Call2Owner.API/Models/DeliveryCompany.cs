@@ -1,27 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace Call2Owner.Models;
 
-public partial class ResidentDocumentUploaded
+public partial class DeliveryCompany
 {
     public int Id { get; set; }
 
-    public int ResidentId { get; set; }
-
-    public int ResidentDocumentRequiredToRegisterId { get; set; }
-
     public string Name { get; set; } = null!;
 
-    public string Url { get; set; } = null!;
+    public string? Logo { get; set; }
 
     public bool IsActive { get; set; }
 
-    public string CreatedBy { get; set; } = null!;
+    public string? CreatedBy { get; set; }
 
     public DateTime? CreatedOn { get; set; }
 
-    public string UpdatedBy { get; set; } = null!;
+    public string? UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
 
@@ -30,4 +26,6 @@ public partial class ResidentDocumentUploaded
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
+    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntries { get; set; } = new List<ResidentFrequentlyEntry>();
 }

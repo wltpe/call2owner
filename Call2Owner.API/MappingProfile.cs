@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
 using Oversight.Controllers;
-using Oversight.DTO;
-using Oversight.Model;
+using Call2Owner.DTO;
+using Call2Owner.Models;
+using Utilities;
 
 namespace Oversight
 {
@@ -11,11 +12,11 @@ namespace Oversight
         {
             CreateMap<User, UserDto>();
 
-            CreateMap<Module, ModuleDto>();
-            CreateMap<Permission, PermissionDto>();
+            CreateMap<Modules, ModuleDto>();
+            CreateMap<Permissions, PermissionDto>();
             CreateMap<ModulePermission, ModulePermissionDto>()
                 .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
-                .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions));
+                .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.PermissionsJson));
 
             // Mapping from PermissionData to PermissionDataDto
             CreateMap<PermissionData, PermissionDataDto>();
@@ -40,7 +41,7 @@ namespace Oversight
             CreateMap<SocietyDocumentUploaded, SocietyDocumentUploadedDTO>().ReverseMap();
 
             CreateMap<SocietyFlat, SocietyFlatDTO>().ReverseMap();
-            CreateMap<SocietyBuilding, SocietyBuildingCTO>().ReverseMap();
+            CreateMap<SocietyBuilding, SocietyBuildingDTO>().ReverseMap();
         }
     }
 }

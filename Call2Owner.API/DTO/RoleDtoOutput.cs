@@ -1,4 +1,4 @@
-﻿namespace Oversight.DTO
+﻿namespace Call2Owner.DTO
 {
     public class RoleDtoOutput
     {

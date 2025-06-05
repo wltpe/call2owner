@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace db_test.Models;
 
-public partial class UserProfile
+public partial class EntityType
 {
     public int Id { get; set; }
 
-    public int UserId { get; set; }
+    public string Name { get; set; } = null!;
 
-    public string? ProfileJson { get; set; }
+    public string? Label { get; set; }
+
+    public string? DafaultValue { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -26,4 +28,6 @@ public partial class UserProfile
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
+    public virtual ICollection<EntityTypeDetail> EntityTypeDetails { get; set; } = new List<EntityTypeDetail>();
 }

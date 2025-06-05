@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace db_test.Models;
 
 public partial class User
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
+
+    public Guid? ParentId { get; set; }
+
+    public int? EntityTypeDetailId { get; set; }
 
     public string? FirstName { get; set; }
 
@@ -41,13 +45,25 @@ public partial class User
 
     public bool? IsVerified { get; set; }
 
+    public string CreatedBy { get; set; } = null!;
+
+    public DateTime? CreatedOn { get; set; }
+
+    public string? UpdatedBy { get; set; }
+
+    public DateTime? UpdatedOn { get; set; }
+
     public bool? IsDeleted { get; set; }
 
-    public int? CreatedBy { get; set; }
+    public string? DeletedBy { get; set; }
 
-    public int? ModifiedBy { get; set; }
+    public DateTime? DeletedOn { get; set; }
+
+    public virtual ICollection<Resident> Residents { get; set; } = new List<Resident>();
 
     public virtual Role Role { get; set; } = null!;
 
     public virtual ICollection<UserParent> UserParents { get; set; } = new List<UserParent>();
+
+    public virtual ICollection<UserProfile> UserProfiles { get; set; } = new List<UserProfile>();
 }

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Oversight.DTO
+namespace Call2Owner.DTO
 {
     public class LoginDto
     {

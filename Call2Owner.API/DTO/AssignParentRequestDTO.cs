@@ -1,8 +1,8 @@
-﻿namespace Oversight.DTO
+﻿namespace Call2Owner.DTO
 {
     public class AssignParentRequestDTO
     {
-        public List<int>? UserIds { get; set; }
-        public int ParentId { get; set; }
+        public List<Guid>? UserIds { get; set; }
+        public Guid ParentId { get; set; }
     }
 }

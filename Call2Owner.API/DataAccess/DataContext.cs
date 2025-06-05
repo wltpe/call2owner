@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Data;
-using Oversight.Model;
-using Oversight.Models;
-using Oversight.DTO;
+using Call2Owner.Models;
+using Call2Owner.Models;
+using Call2Owner.DTO;
+using Utilities;
+using System.Reflection;
 
 namespace Oversight
 {
@@ -10,9 +12,9 @@ namespace Oversight
     {
         public DataContext(DbContextOptions<DataContext> options) : base(options) { }
 
-        public virtual DbSet<Module> Modules { get; set; } = null!;
+        public virtual DbSet<Modules> Modules { get; set; } = null!;
         public virtual DbSet<ModulePermission> ModulePermissions { get; set; } = null!;
-        public virtual DbSet<Permission> Permissions { get; set; } = null!;
+        public virtual DbSet<Permissions> Permissions { get; set; } = null!;
         public virtual DbSet<Role> Roles { get; set; } = null!;
         public virtual DbSet<RoleClaim> RoleClaims { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;

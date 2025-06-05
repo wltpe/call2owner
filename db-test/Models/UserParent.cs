@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Call2Owner.API.Model;
+namespace db_test.Models;
 
-public partial class ResidentDocumentRequiredToRegister
+public partial class UserParent
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int EntityTypeDetailId { get; set; }
+    public Guid UserId { get; set; }
 
-    public string Value { get; set; } = null!;
+    public int ParentId { get; set; }
 
-    public bool IsRequired { get; set; }
+    public bool? IsVerified { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -19,7 +19,7 @@ public partial class ResidentDocumentRequiredToRegister
 
     public DateTime? CreatedOn { get; set; }
 
-    public string UpdatedBy { get; set; } = null!;
+    public string? UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
 
@@ -28,4 +28,6 @@ public partial class ResidentDocumentRequiredToRegister
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
+    public virtual User User { get; set; } = null!;
 }

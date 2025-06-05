@@ -1,31 +1,18 @@
-﻿using System;
+﻿using Call2Owner.DTO;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
 
-namespace Oversight.Model
+namespace Call2Owner.Models;
+
+public partial class RoleClaim
 {
-    public partial class RoleClaim
-    {
-        public int Id { get; set; }
-        public int RoleId { get; set; }
+    public int Id { get; set; }
 
-        // Stored in DB as TEXT
-        public string ModulePermissionsJson { get; set; } = "[]";
+    public int RoleId { get; set; }
 
-        [NotMapped]
-        public List<ModulePermissionData> ModulePermissions
-        {
-            get => JsonSerializer.Deserialize<List<ModulePermissionData>>(ModulePermissionsJson) ?? new();
-            set => ModulePermissionsJson = JsonSerializer.Serialize(value);
-        }
+    public string ModulePermissionsJson { get; set; } = null!;
 
-        public virtual Role Role { get; set; } = null!;
-    }
+    public List<RoleClaimDto> ModulePermissions { get; set; }
 
-    public class ModulePermissionData
-    {
-        public int ModuleId { get; set; }
-        public List<PermissionData> Permissions { get; set; } = new();
-    }
+    public virtual Role Role { get; set; } = null!;
 }

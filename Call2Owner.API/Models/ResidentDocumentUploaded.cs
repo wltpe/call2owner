@@ -1,22 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Oversight.Model
+namespace Call2Owner.Models;
+
+public partial class ResidentDocumentUploaded
 {
-    public class ResidentDocumentUploaded
-    {
-        public int Id { get; set; }
-        public int ResidentId { get; set; }
-        public int ResidentDocumentRequiredToRegisterId { get; set; }
-        public string Name { get; set; }
-        public string Url { get; set; }
-        public bool IsActive { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime? CreatedOn { get; set; }
-        public string UpdatedBy { get; set; }
-        public DateTime? UpdatedOn { get; set; }
-        public bool? IsDeleted { get; set; }
-        public string DeletedBy { get; set; }
-        public DateTime? DeletedOn { get; set; }
-    }
+    public Guid Id { get; set; }
+
+    public Guid ResidentId { get; set; }
+
+    public Guid ResidentDocumentRequiredToRegisterId { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string Url { get; set; } = null!;
+
+    public bool IsActive { get; set; }
+
+    public string CreatedBy { get; set; } = null!;
+
+    public DateTime? CreatedOn { get; set; }
+
+    public string? UpdatedBy { get; set; }
+
+    public DateTime? UpdatedOn { get; set; }
+
+    public bool? IsDeleted { get; set; }
+
+    public string? DeletedBy { get; set; }
+
+    public DateTime? DeletedOn { get; set; }
+
+    public virtual Resident Resident { get; set; } = null!;
+
+    public virtual ResidentDocumentRequiredToRegister ResidentDocumentRequiredToRegister { get; set; } = null!;
 }
