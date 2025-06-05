@@ -7,7 +7,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Oversight
+namespace Call2Owner
 {
     public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
     {

@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Call2Owner.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Utilities;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [Route("[controller]")]
     [ApiController]
@@ -17,37 +18,37 @@ namespace Oversight.Controllers
             return Ok("Admin Dashboard Access Granted!");
         }
 
-        [Authorize(Policy = Module.UserManagement)]
-        [Authorize(Policy = Permission.Add)]
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpGet("User_Add")]
         public IActionResult User_Add()
         {
             return Ok("You have permission to User_Add.");
         }
 
-        [Authorize(Policy = Module.UserManagement)]
-        [Authorize(Policy = Permission.Add)]
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpGet("Quotation_Add")]
         public IActionResult Quotation_Add()
         {
             return Ok("You have permission to User_Add.");
         }
 
-        [Authorize(Policy = Module.UserManagement)]
-        [Authorize(Policy = Permission.Update)]
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpGet("Quotation_Update")]
         public IActionResult Quotation_Update()
         {
             return Ok("You have permission to User_Update.");
         }
 
-        [EmailTrigger(Module.UserManagement, Permission.Update)]
-        [Authorize(Policy = Module.UserManagement)]
-        [Authorize(Policy = Permission.Update)]
+        //[EmailTrigger(Module.UserManagement, Permission.Update)]
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpGet("test-email")]
         public IActionResult TestEmail()
         {
-            var user = new Model.User
+            var user = new User
             {
                 FirstName = "model.FirstName",
                 LastName = "model.LastName",
@@ -55,7 +56,6 @@ namespace Oversight.Controllers
                 MobileNumber = "9023937303",
                 RoleId = 1,
                 VerificationCode = "123-123-123",
-                ParentRoleId = 1,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
                 IsVerified = false

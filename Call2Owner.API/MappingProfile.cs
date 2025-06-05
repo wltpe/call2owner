@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
-using Oversight.Controllers;
+using Call2Owner.Controllers;
 using Call2Owner.DTO;
 using Call2Owner.Models;
 using Utilities;
+using Module = Call2Owner.Models.Module;
 
-namespace Oversight
+namespace Call2Owner
 {
     public class MappingProfile:Profile
     {
@@ -12,8 +13,8 @@ namespace Oversight
         {
             CreateMap<User, UserDto>();
 
-            CreateMap<Modules, ModuleDto>();
-            CreateMap<Permissions, PermissionDto>();
+            CreateMap<Module, ModuleDto>();
+            CreateMap<Models.Permission, PermissionDto>();
             CreateMap<ModulePermission, ModulePermissionDto>()
                 .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
                 .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.PermissionsJson));

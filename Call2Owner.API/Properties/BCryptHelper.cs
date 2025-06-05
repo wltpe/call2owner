@@ -1,4 +1,4 @@
-﻿namespace Oversight.Properties
+﻿namespace Call2Owner.Properties
 {
     public class BCryptHelper
     {

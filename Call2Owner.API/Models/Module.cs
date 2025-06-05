@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class Modules
+public partial class Module
 {
     public int ModuleId { get; set; }
 

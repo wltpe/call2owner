@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Call2Owner.DTO;
 using Call2Owner.Models;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

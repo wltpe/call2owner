@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Utilities;
 
-namespace Oversight
+namespace Call2Owner
 {
     public class EmailTriggerAttribute : ActionFilterAttribute
     {

@@ -7,9 +7,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using Call2Owner.DTO;
-//using Oversight.Model;
-using Call2Owner.Model;
-using Oversight.Services;
+//using Call2Owner.Model;
+using Call2Owner.Models;
+using Call2Owner.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -18,7 +18,7 @@ using System.Text;
 using System.Text.Json;
 using Utilities;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -58,7 +58,6 @@ namespace Oversight.Controllers
 
         #region Public Methods
 
-        [EmailTrigger(Utilities.Module.UserManagement, Utilities.Permission.Update)]
         [Authorize(Policy = Utilities.Module.UserManagement)]
         [Authorize(Policy = Utilities.Permission.Add)]
         [Authorize]
@@ -71,7 +70,7 @@ namespace Oversight.Controllers
             if (currentUserId == "0")
                 return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
+            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
             if (currentUser == null)
                 return Unauthorized(new { message = "User not found or unauthorized." });
 
@@ -93,7 +92,7 @@ namespace Oversight.Controllers
                 model.RoleId = Convert.ToInt32(UserRoles.Resident);
             }
 
-            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+            if (await _context.User.AnyAsync(u => u.Email == model.Email))
                 return BadRequest(new { message = "Email already exists!" });
 
 
@@ -103,7 +102,7 @@ namespace Oversight.Controllers
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Roles.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
             if (!validChildRole && role != UserRoles.SuperAdmin)
                 return Forbid("You do not have permission to assign this role.");
 
@@ -114,7 +113,7 @@ namespace Oversight.Controllers
 
 
             string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
-            var user = new users
+            var user = new User
             {
                 FirstName = model.FirstName,
                 LastName = model.LastName,
@@ -122,16 +121,15 @@ namespace Oversight.Controllers
                 MobileNumber = model.MobileNumber,
                 RoleId = model.RoleId,
                 VerificationCode = verificationCode,
-                ParentRoleId = currentUser.RoleId,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
                 IsDeleted = false,
                 IsVerified = false,
                 CreatedBy = currentUserId,
-                resetLink = resetLink
+                //ResetLink = resetLink
             };
 
-            await _context.Users.AddAsync(user);
+            await _context.User.AddAsync(user);
             await _context.SaveChangesAsync();
 
 
@@ -178,9 +176,9 @@ namespace Oversight.Controllers
             if (userIdClaim == null)
                 return Unauthorized(new { message = "Invalid token or user not found." });
 
-            int userId = int.Parse(userIdClaim.Value);
+            Guid userId = new Guid(userIdClaim.Value);
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -203,14 +201,14 @@ namespace Oversight.Controllers
             });
         }
 
-        [EmailTrigger(Utilities.Module.UserManagement, Utilities.Permission.ResendVerificationEmail)]
+        //[EmailTrigger(Utilities.Module.UserManagement, Utilities.Permission.ResendVerificationEmail)]
         [HttpPost("resend-verification-email")]
-        public async Task<IActionResult> ResendVerificationEmail([FromBody] DTO.ResendEmailRequest request)
+        public async Task<IActionResult> ResendVerificationEmail([FromBody] ResendEmailRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest("Email is required.");
 
-            var user = await _context.Users
+            var user = await _context.User
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if (user == null)
@@ -230,7 +228,7 @@ namespace Oversight.Controllers
                 <a href='{resetLink}' style='padding:10px 20px; background:#28a745; color:white; text-decoration:none; border-radius:5px;'>Set Password</a>
                 <p>If you didn't request this, ignore this email.</p>";
 
-            user.resetLink = resetLink;
+            //user.ResetLink = resetLink;
 
             user.VerificationCode = verificationCode;
             user.VerificationCodeGenerationTime = DateTime.UtcNow;
@@ -253,7 +251,7 @@ namespace Oversight.Controllers
             _logger.LogInformation("This is a test log from Application Insights");
             _logger.LogError("This is a test log from Application Insights");
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaims) // Include RoleClaims under Role
                 .FirstOrDefaultAsync(u => u.Email == model.Email);
@@ -335,7 +333,7 @@ namespace Oversight.Controllers
         [HttpPost("send-reset-link")]
         public async Task<IActionResult> SendResetLink([FromQuery] string email)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
                 return BadRequest(new { message = "User not found." });
 
@@ -360,11 +358,10 @@ namespace Oversight.Controllers
             return Ok(new { message = "Reset link sent successfully.", email, emailBody });
         }
 
-        [EmailTrigger(Utilities.Module.UserManagement, Utilities.Permission.ForgetEmailPwd)]
         [HttpPost("forget-password/{email}")]
         public async Task<IActionResult> ForgetPassword(string email)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
                 return BadRequest(new { message = "User not found." });
 
@@ -377,7 +374,7 @@ namespace Oversight.Controllers
             string encryptedToken = Encrypt(token);
             var resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
 
-            user.resetLink = resetLink;
+            //user.ResetLink = resetLink;
 
             //var resetLink = $"http://outriskappback.kindlebit.net/set-password?{encryptedToken}&&{encryptedEmail}";
 
@@ -509,7 +506,7 @@ namespace Oversight.Controllers
                 }
 
                 // Find user by token
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
                 if (user == null)
                     return NotFound(new { message = "Invalid email.", ResendToken = false });
 
@@ -542,12 +539,12 @@ namespace Oversight.Controllers
                 var userParent = new UserParent
                 {
                     UserId = user.Id,
-                    ParentId = (int)user.CreatedBy,
+                    ParentId = int.Parse(user.CreatedBy),
                     IsActive = true,
                     IsDeleted = false,
                     IsVerified = true
                 };
-                _context.UserParents.Add(userParent);
+                _context.UserParent.Add(userParent);
                 await _context.SaveChangesAsync();
 
                 await _context.SaveChangesAsync();
@@ -570,7 +567,7 @@ namespace Oversight.Controllers
                 return Unauthorized("Role not found in token");
 
             // Find the Role ID of the Logged-in User
-            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Id.ToString() == role);
+            var userRole = await _context.Role.FirstOrDefaultAsync(r => r.Id.ToString() == role);
             if (userRole == null)
                 return NotFound("Role not found in database");
 
@@ -584,7 +581,7 @@ namespace Oversight.Controllers
                 return NotFound("No child roles found");
 
             // Fetch Users belonging to those roles
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => childRoleIds.Contains(u.RoleId))
                 .ToListAsync();
 
@@ -598,7 +595,7 @@ namespace Oversight.Controllers
         [HttpGet("getAllRoles")]
         public async Task<IActionResult> GetAllRoles()
         {
-            var roles = await _context.Roles
+            var roles = await _context.Role
                 .Select(r => new RoleDtoOutput
                 {
                     RoleId = r.Id,
@@ -613,7 +610,7 @@ namespace Oversight.Controllers
         [HttpGet("getAllUsers")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
@@ -632,7 +629,7 @@ namespace Oversight.Controllers
         [HttpGet("brokerList")]
         public async Task<IActionResult> BrokerList()
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => u.RoleId == Convert.ToInt32(UserRoles.Admin))
                 .Select(u => new UsersDtoOutput
                 {
@@ -650,58 +647,58 @@ namespace Oversight.Controllers
             return Ok(users);
         }
 
-        [HttpGet("brokerById/{brokerId}")]
-        public async Task<IActionResult> BrokerById(int brokerId)
-        {
-            var users = await _context.Users
-                .Where(u => u.Id == brokerId)
-                .Select(u => new UsersDtoOutput
-                {
-                    Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    RoleId = u.RoleId,
-                    Email = u.Email,
-                    MobileNumber = u.MobileNumber, 
-                    IsActive = u.IsActive,
-                    IsVerified = u.IsVerified
-                })
-                .FirstOrDefaultAsync();
+        //[HttpGet("brokerById/{brokerId}")]
+        //public async Task<IActionResult> BrokerById(int brokerId)
+        //{
+        //    var users = await _context.Users
+        //        .Where(u => u.Id == brokerId)
+        //        .Select(u => new UsersDtoOutput
+        //        {
+        //            Id = u.Id,
+        //            FirstName = u.FirstName,
+        //            LastName = u.LastName,
+        //            RoleId = u.RoleId,
+        //            Email = u.Email,
+        //            MobileNumber = u.MobileNumber, 
+        //            IsActive = u.IsActive,
+        //            IsVerified = u.IsVerified
+        //        })
+        //        .FirstOrDefaultAsync();
 
-            return Ok(users);
-        }
+        //    return Ok(users);
+        //}
 
-        [HttpGet("user-parent-list")]
-        public async Task<IActionResult> UserParentList()
-        {
-            var usersParentList = await (
-                from up in _context.UserParents
-                join user in _context.Users on up.UserId equals user.Id
-                join parent in _context.Users on up.ParentId equals parent.Id
-                select new
-                {
-                    UserId = up.UserId,
-                    UserFirstName = user.FirstName,
-                    UserLastName = user.LastName,
-                    UserEmail = user.Email,
+        //[HttpGet("user-parent-list")]
+        //public async Task<IActionResult> UserParentList()
+        //{
+        //    var usersParentList = await (
+        //        from up in _context.UserParents
+        //        join user in _context.Users on up.UserId equals user.Id
+        //        join parent in _context.Users on up.ParentId equals parent.Id
+        //        select new
+        //        {
+        //            UserId = up.UserId,
+        //            UserFirstName = user.FirstName,
+        //            UserLastName = user.LastName,
+        //            UserEmail = user.Email,
 
-                    ParentId = up.ParentId,
-                    ParentFirstName = parent.FirstName,
-                    ParentLastName = parent.LastName,
-                    ParentEmail = parent.Email,
+        //            ParentId = up.ParentId,
+        //            ParentFirstName = parent.FirstName,
+        //            ParentLastName = parent.LastName,
+        //            ParentEmail = parent.Email,
 
-                    up.IsActive,
-                    up.IsVerified
-                }
-            ).ToListAsync();
+        //            up.IsActive,
+        //            up.IsVerified
+        //        }
+        //    ).ToListAsync();
 
-            if (usersParentList == null || !usersParentList.Any())
-            {
-                return NotFound(new { message = "No user-parent relationships found." });
-            }
+        //    if (usersParentList == null || !usersParentList.Any())
+        //    {
+        //        return NotFound(new { message = "No user-parent relationships found." });
+        //    }
 
-            return Ok(usersParentList);
-        }
+        //    return Ok(usersParentList);
+        //}
 
 
         //[HttpPost("assign-parent-to-users")]
@@ -762,68 +759,68 @@ namespace Oversight.Controllers
         //}
 
 
-        [HttpPost("assign-parent-to-users")]
-        public async Task<IActionResult> AssignParentToUsers([FromBody] AssignParentRequestDTO model)
-        {
-            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        //[HttpPost("assign-parent-to-users")]
+        //public async Task<IActionResult> AssignParentToUsers([FromBody] AssignParentRequestDTO model)
+        //{
+        //    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            if (currentUserId == 0)
-                return Unauthorized(new { message = "Invalid user." });
+        //    if (currentUserId == 0)
+        //        return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
-            if (currentUser == null)
-                return Unauthorized(new { message = "User not found or unauthorized." });
+        //    var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
+        //    if (currentUser == null)
+        //        return Unauthorized(new { message = "User not found or unauthorized." });
 
-            // Validate parent
-            var parentUser = await _context.Users.FindAsync(model.ParentId);
-            if (parentUser == null)
-            {
-                return NotFound(new { message = "Parent user not found." });
-            }
+        //    // Validate parent
+        //    var parentUser = await _context.Users.FindAsync(model.ParentId);
+        //    if (parentUser == null)
+        //    {
+        //        return NotFound(new { message = "Parent user not found." });
+        //    }
 
-            // Get only valid user IDs from the request
-            var validUserIds = await _context.Users
-                .Where(u => model.UserIds.Contains(u.Id))
-                .Select(u => u.Id)
-                .ToListAsync();
+        //    // Get only valid user IDs from the request
+        //    var validUserIds = await _context.Users
+        //        .Where(u => model.UserIds.Contains(u.Id))
+        //        .Select(u => u.Id)
+        //        .ToListAsync();
 
-            // Remove any existing parent mappings for the users
-            var existingRelations = await _context.UserParents
-                .Where(up => validUserIds.Contains(up.UserId))
-                .ToListAsync();
+        //    // Remove any existing parent mappings for the users
+        //    var existingRelations = await _context.UserParents
+        //        .Where(up => validUserIds.Contains(up.UserId))
+        //        .ToListAsync();
 
-            if (existingRelations.Any())
-            {
-                _context.UserParents.RemoveRange(existingRelations);
-            }
+        //    if (existingRelations.Any())
+        //    {
+        //        _context.UserParents.RemoveRange(existingRelations);
+        //    }
 
-            // Create new mappings
-            var newRelations = validUserIds.Select(userId => new UserParent
-            {
-                UserId = userId,
-                ParentId = model.ParentId,
-                CreatedBy = currentUserId,
-                IsActive = true,
-                IsDeleted = false,
-                IsVerified = true
-            }).ToList();
+        //    // Create new mappings
+        //    var newRelations = validUserIds.Select(userId => new UserParent
+        //    {
+        //        UserId = userId,
+        //        ParentId = model.ParentId,
+        //        CreatedBy = currentUserId.ToString(),
+        //        IsActive = true,
+        //        IsDeleted = false,
+        //        IsVerified = true
+        //    }).ToList();
 
-            await _context.UserParents.AddRangeAsync(newRelations);
-            await _context.SaveChangesAsync();
+        //    await _context.UserParents.AddRangeAsync(newRelations);
+        //    await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Parent assigned to users successfully.",
-                assignedUsers = newRelations.Select(x => x.UserId).ToList()
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        message = "Parent assigned to users successfully.",
+        //        assignedUsers = newRelations.Select(x => x.UserId).ToList()
+        //    });
+        //}
 
 
 
         [HttpGet("getAllUsersByRole/{roleId}")]
         public async Task<IActionResult> GetAllUsersByRole(int roleId)
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
@@ -844,7 +841,7 @@ namespace Oversight.Controllers
         public async Task<IActionResult> GetAllParentRoleUsers(int roleId)
         {
             // Step 1: Get the ParentRoleId of the given role
-            var parentRoleId = await _context.Roles
+            var parentRoleId = await _context.Role
                 .Where(r => r.Id == roleId)
                 .Select(r => r.ParentRoleId)
                 .FirstOrDefaultAsync();
@@ -855,7 +852,7 @@ namespace Oversight.Controllers
             }
 
             // Step 2: Get users with the parent role ID
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => u.RoleId == parentRoleId)
                 .Select(u => new UsersDtoOutput
                 {
@@ -889,7 +886,7 @@ namespace Oversight.Controllers
 
             var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.Guid()),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(ClaimTypes.Role, user.Role?.Id.ToString() ?? "0"),
                     new Claim("FirstName", user.FirstName ?? ""),
@@ -927,7 +924,7 @@ namespace Oversight.Controllers
                                     (307, "FinanceUser", 304)
                                 };
 
-            var existingRoles = await context.Roles.ToDictionaryAsync(r => r.RoleName, r => r);
+            var existingRoles = await context.Role.ToDictionaryAsync(r => r.RoleName, r => r);
 
             // Begin transaction to ensure consistency
             using var transaction = await context.Database.BeginTransactionAsync();
@@ -955,7 +952,7 @@ namespace Oversight.Controllers
                             ParentRoleId = parentRoleId
                         };
 
-                        await context.Roles.AddAsync(role);
+                        await context.Role.AddAsync(role);
 
                         existingRoles[roleName] = role;
                     }
@@ -972,7 +969,7 @@ namespace Oversight.Controllers
 
                 // Seed SuperAdmin user
                 var superAdminRole = existingRoles["SuperAdmin"];
-                if (superAdminRole != null && !await context.Users.AnyAsync(u => u.Email == "superadmin@gmail.com"))
+                if (superAdminRole != null && !await context.User.AnyAsync(u => u.Email == "superadmin@gmail.com"))
                 {
                     var superAdmin = new User
                     {
@@ -986,7 +983,7 @@ namespace Oversight.Controllers
                         IsVerified = true
                     };
 
-                    await context.Users.AddAsync(superAdmin);
+                    await context.User.AddAsync(superAdmin);
                     await context.SaveChangesAsync();
                 }
 
@@ -1066,30 +1063,30 @@ namespace Oversight.Controllers
         //    return Ok(tree);
         //}
 
-        [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.GetAll)]
-        [HttpGet("hierarchy")]
-        public async Task<IActionResult> GetUserHierarchy()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-                return Unauthorized(new { message = "Invalid token or user not found." });
+        //[Authorize(Policy = Utilities.Module.UserManagement)]
+        //[Authorize(Policy = Utilities.Permission.GetAll)]
+        //[HttpGet("hierarchy")]
+        //public async Task<IActionResult> GetUserHierarchy()
+        //{
+        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        //    if (userIdClaim == null)
+        //        return Unauthorized(new { message = "Invalid token or user not found." });
 
-            int userId = int.Parse(userIdClaim.Value);
+        //    int userId = int.Parse(userIdClaim.Value);
 
-            var users = await _context.Users.ToListAsync();
+        //    var users = await _context.Users.ToListAsync();
 
-            // Build full tree from root
-            var fullTree = BuildUserTree(users, null);
+        //    // Build full tree from root
+        //    var fullTree = BuildUserTree(users, null);
 
-            // Find the subtree under the current user
-            var userSubTree = FindUserSubTree(fullTree, userId);
+        //    // Find the subtree under the current user
+        //    var userSubTree = FindUserSubTree(fullTree, userId);
 
-            if (userSubTree == null)
-                return NotFound(new { message = "User not found in the hierarchy." });
+        //    if (userSubTree == null)
+        //        return NotFound(new { message = "User not found in the hierarchy." });
 
-            return Ok(userSubTree);
-        }
+        //    return Ok(userSubTree);
+        //}
 
         //[Authorize(Policy = Utilities.Module.UserManagement)]
         //[Authorize(Policy = Utilities.Permission.GetAll)]
@@ -1097,12 +1094,12 @@ namespace Oversight.Controllers
         [HttpGet("GetAllClaimUsersByInsurerId")]
         public async Task<IActionResult> GetAllClaimUsersByInsurerId([FromQuery] int insurerid)
         {
-            var usersUnderInsurer = await _context.UserParents
+            var usersUnderInsurer = await _context.UserParent
                 .Where(x => x.ParentId == insurerid)
                 .Select(x => x.UserId)
                 .ToListAsync();
 
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(x => usersUnderInsurer.Contains(x.Id))
                .Select(u => new UsersDtoOutput
                {
@@ -1125,34 +1122,34 @@ namespace Oversight.Controllers
 
         #region Private Method
 
-        private List<ChildUsersDTO> BuildUserTree(List<User> users, int? parentId)
-        {
-            return users
-                .Where(u => u.CreatedBy == parentId)
-                .Select(u => new ChildUsersDTO
-                {
-                    UserId = u.Id,
-                    FullName = $"{u.FirstName} {u.LastName}",
-                    Email = u.Email,
-                    Children = BuildUserTree(users, u.Id) // Recursive
-                })
-                .ToList();
-        }
+        //private List<ChildUsersDTO> BuildUserTree(List<User> users, int? parentId)
+        //{
+        //    return users
+        //        .Where(u => u.CreatedBy == parentId)
+        //        .Select(u => new ChildUsersDTO
+        //        {
+        //            UserId = u.Id,
+        //            FullName = $"{u.FirstName} {u.LastName}",
+        //            Email = u.Email,
+        //            Children = BuildUserTree(users, u.Id) // Recursive
+        //        })
+        //        .ToList();
+        //}
 
 
-        private ChildUsersDTO? FindUserSubTree(List<ChildUsersDTO> tree, int userId)
-        {
-            foreach (var node in tree)
-            {
-                if (node.UserId == userId)
-                    return node;
+        //private ChildUsersDTO? FindUserSubTree(List<ChildUsersDTO> tree, int userId)
+        //{
+        //    foreach (var node in tree)
+        //    {
+        //        if (node.UserId == userId)
+        //            return node;
 
-                var found = FindUserSubTree(node.Children, userId);
-                if (found != null)
-                    return found;
-            }
-            return null;
-        }
+        //        var found = FindUserSubTree(node.Children, userId);
+        //        if (found != null)
+        //            return found;
+        //    }
+        //    return null;
+        //}
 
 
 
@@ -1199,7 +1196,7 @@ namespace Oversight.Controllers
 
         private async Task<List<int>> GetAllChildRoleIdsAsync(int parentId)
         {
-            var childRoles = await _context.Roles
+            var childRoles = await _context.Role
                 .Where(r => r.ParentRoleId == parentId)
                 .ToListAsync();
 
@@ -1216,18 +1213,18 @@ namespace Oversight.Controllers
 
         private async Task<List<Role>> GetChildRolesAsync(string roleName)
         {
-            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Id.ToString() == roleName);
+            var userRole = await _context.Role.FirstOrDefaultAsync(r => r.Id.ToString() == roleName);
             if (userRole == null) return new List<Role>();
 
             var childRoleIds = await GetAllChildRoleIdsAsync(userRole.Id);
-            return await _context.Roles.Where(r => childRoleIds.Contains(r.Id)).ToListAsync();
+            return await _context.Role.Where(r => childRoleIds.Contains(r.Id)).ToListAsync();
         }
 
 
         // Recursive function to get all child role IDs
         private async Task<List<int>> GetAllChildRoleIds(int parentId)
         {
-            var childRoles = await _context.Roles
+            var childRoles = await _context.Role
                 .Where(r => r.ParentRoleId == parentId)
                 .ToListAsync();
 

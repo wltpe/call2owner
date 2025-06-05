@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Utilities;
 
-namespace Oversight
+namespace Call2Owner
 {
     public class EmailTriggerService : IEmailTriggerService
     {

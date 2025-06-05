@@ -1,4 +1,4 @@
-﻿namespace Oversight
+﻿namespace Call2Owner
 {
     public class MailSettings
     {

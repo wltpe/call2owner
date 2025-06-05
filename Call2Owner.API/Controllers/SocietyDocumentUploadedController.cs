@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using Call2Owner.DTO;
 using Call2Owner.Models;
-using Oversight.Services;
+using Call2Owner.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Sockets;
@@ -18,7 +18,7 @@ using System.Text;
 using System.Text.Json;
 using Utilities;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

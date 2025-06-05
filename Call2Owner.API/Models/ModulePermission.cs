@@ -11,5 +11,5 @@ public partial class ModulePermission
 
     public string PermissionsJson { get; set; } = null!;
 
-    public virtual Modules Module { get; set; } = null!;
+    public virtual Module Module { get; set; } = null!;
 }

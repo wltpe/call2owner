@@ -8,7 +8,7 @@ using Call2Owner.Models;
 using System;
 using System.Text.Json;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -41,7 +41,7 @@ namespace Oversight.Controllers
         [HttpGet("GetRolesModulesPermissions")]
         public async Task<ActionResult<IEnumerable<object>>> GetRolesModulesPermissions()
         {
-            var roles = await _context.Roles
+            var roles = await _context.Role
                 .Select(rc => new
                 {
                     rc.Id,
@@ -50,7 +50,7 @@ namespace Oversight.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            var modules = await _context.Modules
+            var modules = await _context.Module
                 .Include(x => x.ModulePermissions)
                 .Select(x => new
                 {
@@ -67,7 +67,7 @@ namespace Oversight.Controllers
         [HttpGet("GetRoleClaims")]
         public async Task<ActionResult<IEnumerable<object>>> GetRoleClaims()
         {
-            var roles = await _context.RoleClaims
+            var roles = await _context.RoleClaim
                 .Include(rc => rc.Role)
                 .Select(rc => new
                 {
@@ -437,7 +437,7 @@ namespace Oversight.Controllers
         [HttpGet("{roleId}")]
         public async Task<ActionResult<IEnumerable<RoleClaim>>> GetRoleClaimsByRoleId(int roleId)
         {
-            var roleClaims = await _context.RoleClaims.Where(rc => rc.RoleId == roleId).ToListAsync();
+            var roleClaims = await _context.RoleClaim.Where(rc => rc.RoleId == roleId).ToListAsync();
             if (!roleClaims.Any())
             {
                 return NotFound("No claims found for this role");

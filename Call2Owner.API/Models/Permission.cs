@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class Permissions
+public partial class Permission
 {
     public int Id { get; set; }
 

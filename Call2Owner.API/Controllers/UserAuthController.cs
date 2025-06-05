@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using Call2Owner.DTO;
 using Call2Owner.Models;
-using Oversight.Services;
+using Call2Owner.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -17,7 +17,7 @@ using System.Text;
 using System.Text.Json;
 using Utilities;
 
-namespace Oversight.Controllers
+namespace Call2Owner.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -70,7 +70,7 @@ namespace Oversight.Controllers
             OTPGenerator otpGenerator = new OTPGenerator();
             string otp = otpGenerator.GenerateOTP();
 
-            var existingUser = await _context.Users
+            var existingUser = await _context.User
                                              .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
 
             if (existingUser != null)
@@ -82,7 +82,7 @@ namespace Oversight.Controllers
                 existingUser.IsActive = true;
                 existingUser.IsVerified = true;
 
-                _context.Users.Update(existingUser);
+                _context.User.Update(existingUser);
             }
             else
             {
@@ -100,7 +100,7 @@ namespace Oversight.Controllers
                     IsVerified = true
                 };
 
-                await _context.Users.AddAsync(newUser);
+                await _context.User.AddAsync(newUser);
             }
 
             await _context.SaveChangesAsync();
@@ -117,7 +117,7 @@ namespace Oversight.Controllers
         {
             _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaims)
                 .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);

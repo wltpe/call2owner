@@ -2,14 +2,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Oversight;
-using Oversight.Controllers;
-using Oversight.Services;
+using Call2Owner;
+using Call2Owner.Controllers;
+using Call2Owner.Services;
 using RestSharp;
 using System.Reflection;
 using System.Text;
 using Utilities;
 using Microsoft.EntityFrameworkCore;
+using Call2Owner.Models;
 
 var publicEndpoints = new HashSet<string>
 {

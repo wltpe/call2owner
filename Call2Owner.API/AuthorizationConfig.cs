@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Oversight;
+using Call2Owner;
 using Utilities;
 
-namespace AuthorizationLibrary
+namespace Call2Owner
 {
     public static class AuthorizationConfig
     {
@@ -41,7 +41,7 @@ namespace AuthorizationLibrary
                 {
                     try
                     {
-                        var userPermissions = JsonSerializer.Deserialize<List<Oversight.Model.ModulePermissionData>>(permissionClaim);
+                        var userPermissions = JsonSerializer.Deserialize<List<ModulePermissionData>>(permissionClaim);
                         if (userPermissions != null)
                         {
                             foreach (var module in userPermissions)
