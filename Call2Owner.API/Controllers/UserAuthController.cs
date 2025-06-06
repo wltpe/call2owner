@@ -70,8 +70,10 @@ namespace Call2Owner.Controllers
             OTPGenerator otpGenerator = new OTPGenerator();
             string otp = otpGenerator.GenerateOTP();
 
-            var existingUser = await _context.User
+            var existingUser = await _context.Users
                                              .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
+
+            Guid Username = Guid.NewGuid();
 
             if (existingUser != null)
             {
@@ -81,31 +83,41 @@ namespace Call2Owner.Controllers
                 existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
                 existingUser.IsActive = true;
                 existingUser.IsVerified = true;
+                existingUser.UpdatedBy = existingUser.Id.ToString();
+                existingUser.UpdatedOn = DateTime.UtcNow;
 
-                _context.User.Update(existingUser);
+
+                _context.Users.Update(existingUser);
             }
             else
             {
-                
+
                 // Create new user
                 var newUser = new User
                 {
+                    Id = Username,
                     MobileNumber = dto.MobileNumber,
+                    FirstName=dto.FirstName,
+                    LastName = dto.LastName,
+                    Email = dto.Email,
                     Otp = otp,
                     OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
                     ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
                     RoleId = Convert.ToInt32(UserRoles.Resident),
                     OtpValidatedOn = null,
                     IsActive = true,
-                    IsVerified = true
+                    IsVerified = true,
+                    CreatedBy=Username.ToString(),
+                    CreatedOn=DateTime.UtcNow
                 };
 
-                await _context.User.AddAsync(newUser);
+                await _context.Users.AddAsync(newUser);
             }
 
             await _context.SaveChangesAsync();
 
-            var message = $"Your one time password {otp} for WLTPE sign-in. Valid for 10 mins. Do not share your OTP with anyone - Yoke Payment.";
+            var message = $"Your one time password to {otp} into WLTPE is sign-in. Valid for 10 mins.Do not share your OTP with anyone-Yoke payment";
+           
             await SendOtpAsync(dto.MobileNumber, message);
 
             return Ok(new { message = "OTP sent successfully!" });
@@ -117,7 +129,7 @@ namespace Call2Owner.Controllers
         {
             _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
 
-            var user = await _context.User
+            var user = await _context.Users
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaims)
                 .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);

@@ -4,7 +4,7 @@ namespace Call2Owner.DTO
 {
     public class UserDto
     {
-        public Guid Id { get; set; }
+        //public Guid Id { get; set; }
         [Required]
         public string? FirstName { get; set; }
 

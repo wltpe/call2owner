@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("db-test")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fabb2532637e5926aeb85338109a5d6b3220c9c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45bb1c6d76c015b2f56cfde76907b7f6e97d60ba")]
 [assembly: System.Reflection.AssemblyProductAttribute("db-test")]
 [assembly: System.Reflection.AssemblyTitleAttribute("db-test")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

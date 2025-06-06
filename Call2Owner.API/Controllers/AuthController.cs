@@ -113,8 +113,12 @@ namespace Call2Owner.Controllers
 
 
             string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
+
+            Guid Username = Guid.NewGuid();
+
             var user = new User
             {
+                Id = Username,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 Email = model.Email,
@@ -126,7 +130,8 @@ namespace Call2Owner.Controllers
                 IsDeleted = false,
                 IsVerified = false,
                 CreatedBy = currentUserId,
-                //ResetLink = resetLink
+                CreatedOn = DateTime.UtcNow
+           //     ResetLink = resetLink
             };
 
             await _context.Users.AddAsync(user);
@@ -969,8 +974,11 @@ namespace Call2Owner.Controllers
                 var superAdminRole = existingRoles["SuperAdmin"];
                 if (superAdminRole != null && !await context.Users.AnyAsync(u => u.Email == "superadmin@gmail.com"))
                 {
+                    Guid username = Guid.NewGuid();
+
                     var superAdmin = new User
                     {
+                        Id = username,
                         FirstName = "Super",
                         LastName = "Admin",
                         Email = "superadmin@gmail.com",
@@ -978,7 +986,9 @@ namespace Call2Owner.Controllers
                         RoleId = superAdminRole.Id,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Super@123"),
                         IsActive = true,
-                        IsVerified = true
+                        IsVerified = true,
+                        CreatedBy= username.ToString(),
+                        CreatedOn = DateTime.UtcNow
                     };
 
                     await context.Users.AddAsync(superAdmin);
