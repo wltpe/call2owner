@@ -62,17 +62,66 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<SocietyDto>(society));
         }
 
-        [HttpPost]
-        public async Task<ActionResult<SocietyDto>> Create(SocietyDto dto)
+        //[Authorize(Policy = Utilities.Module.UserManagement)]
+        //[Authorize(Policy = Utilities.Permission.Add)]
+        //[Authorize]
+        [HttpPost("create")]
+        public async Task<ActionResult<SocietyDto>> Create(CreateSocietyDto dto)
         {
-            var entity = _mapper.Map<Society>(dto);
-            entity.CreatedOn = DateTime.UtcNow;
-            entity.IsActive = true;
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            _context.Society.Add(entity);
+            var existingSociety = await _context.Society
+        .FirstOrDefaultAsync(u =>
+        u.Country.Id == dto.CountryId &&
+        u.State.Id == dto.StateId &&
+        u.City.Id == dto.CityId &&
+        u.Name.ToLower() == dto.Name.ToLower());
+
+            if (existingSociety != null)
+            {
+                return BadRequest("Socity already exist.");
+            }
+
+            Guid Username = Guid.NewGuid();
+
+            var newSociety = new Society 
+            {
+            Id = Username,
+            CountryId = dto.CountryId,
+            StateId = dto.StateId,
+            CityId = dto.CityId,
+            Name = dto.Name,
+            Description = dto.Description,
+            SocietyImage=   dto.SocietyImage,
+            EntityTypeDetailId= dto.EntityTypeDetailId,
+            IsActive=true,
+            IsApproved=true,
+            ApprovedBy=currentUserId,
+            ApprovedOn=DateTime.UtcNow,
+            CreatedBy=currentUserId,
+            CreatedOn=DateTime.UtcNow,
+            IsDeleted=false,
+            Longitude=dto.Longitude,
+            Latitude=dto.Latitude,
+            PinCode=dto.PinCode,
+            Address=dto.Address
+            };
+
+            //var entity = _mapper.Map<Society>(dto);
+            //entity.Id = Username;
+            //entity.CreatedOn = DateTime.UtcNow;
+            //entity.CreatedBy = currentUserId;
+            //entity.IsActive = true;
+            //entity.IsDeleted = false;
+
+
+            //_context.Society.Add(entity);
+                await _context.Society.AddAsync(newSociety);
+
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = entity.Id }, _mapper.Map<SocietyDto>(entity));
+            // return CreatedAtAction(nameof(GetById), new { id = entity.Id }, _mapper.Map<SocietyDto>(entity));
+            return _mapper.Map<SocietyDto>(newSociety);
         }
 
         [HttpPut("{id}")]
