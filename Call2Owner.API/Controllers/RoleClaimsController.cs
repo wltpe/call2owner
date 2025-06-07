@@ -41,7 +41,7 @@ namespace Call2Owner.Controllers
         [HttpGet("GetRolesModulesPermissions")]
         public async Task<ActionResult<IEnumerable<object>>> GetRolesModulesPermissions()
         {
-            var roles = await _context.Role
+            var roles = await _context.Roles
                 .Select(rc => new
                 {
                     rc.Id,
@@ -67,7 +67,7 @@ namespace Call2Owner.Controllers
         [HttpGet("GetRoleClaims")]
         public async Task<ActionResult<IEnumerable<object>>> GetRoleClaims()
         {
-            var roles = await _context.RoleClaim
+            var roles = await _context.RoleClaims
                 .Include(rc => rc.Role)
                 .Select(rc => new
                 {
@@ -437,7 +437,7 @@ namespace Call2Owner.Controllers
         [HttpGet("{roleId}")]
         public async Task<ActionResult<IEnumerable<RoleClaim>>> GetRoleClaimsByRoleId(int roleId)
         {
-            var roleClaims = await _context.RoleClaim.Where(rc => rc.RoleId == roleId).ToListAsync();
+            var roleClaims = await _context.RoleClaims.Where(rc => rc.RoleId == roleId).ToListAsync();
             if (!roleClaims.Any())
             {
                 return NotFound("No claims found for this role");
