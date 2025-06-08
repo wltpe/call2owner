@@ -40,7 +40,7 @@ namespace Oversight.Controllers
         [HttpGet("permissions")]
         public IActionResult GetPermissions()
         {
-            var permissions = _context.Permissions.ToList();
+            var permissions = _context.Permission.ToList();
             var permissionDtos = _mapper.Map<List<PermissionDto>>(permissions);
             return Ok(permissionDtos);
         }
@@ -51,9 +51,9 @@ namespace Oversight.Controllers
         public IActionResult GetModulePermission(int moduleId)
         {
             var modules = _context.Module.ToList();
-            var permissions = _context.Permissions.ToList();
+            var permissions = _context.Permission.ToList();
 
-            var modulePermission = _context.ModulePermissions
+            var modulePermission = _context.ModulePermission
                 .Where(mp => mp.ModuleId == moduleId)
                 .ToList();
 
@@ -95,9 +95,9 @@ namespace Oversight.Controllers
         public IActionResult GetModulePermissions()
         {
             var modules = _context.Module.ToList();
-            var permissions = _context.Permissions.ToList();
+            var permissions = _context.Permission.ToList();
 
-            var modulePermission = _context.ModulePermissions
+            var modulePermission = _context.ModulePermission
                 .ToList();
 
             if (!modulePermission.Any())
@@ -136,7 +136,7 @@ namespace Oversight.Controllers
         [HttpGet("roles")]
         public async Task<ActionResult<IEnumerable<RoleDto>>> GetRoles()
         {
-            var roles = await _context.Roles.ToListAsync();
+            var roles = await _context.Role.ToListAsync();
             return Ok(_mapper.Map<List<RoleDto>>(roles));
         }
 
@@ -146,7 +146,7 @@ namespace Oversight.Controllers
         [HttpGet("role/{id}")]
         public async Task<ActionResult<RoleDetailDto>> GetRoleById(int id)
         {
-            var role = await _context.Roles
+            var role = await _context.Role
                 .Include(r => r.RoleClaims)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
@@ -165,7 +165,7 @@ namespace Oversight.Controllers
         public async Task<IActionResult> AddOrUpdateRoleClaim([FromBody] RoleClaimDto roleClaimDto)
         {
             // Validate if Role exists
-            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == roleClaimDto.Id);
+            var role = await _context.Role.FirstOrDefaultAsync(r => r.Id == roleClaimDto.Id);
             if (role == null)
                 return BadRequest("Invalid RoleId.");
 
@@ -173,7 +173,7 @@ namespace Oversight.Controllers
             if (!string.IsNullOrEmpty(roleClaimDto.RoleName) && role.RoleName != roleClaimDto.RoleName)
             {
                 role.RoleName = roleClaimDto.RoleName;
-                _context.Roles.Update(role);
+                _context.Role.Update(role);
             }
 
             // Extract distinct ModuleIds
@@ -196,7 +196,7 @@ namespace Oversight.Controllers
                 .ToList();
 
             // Validate PermissionIds
-            var existingPermissions = await _context.Permissions
+            var existingPermissions = await _context.Permission
                 .Where(p => permissionIds.Contains(p.Id))
                 .Select(p => p.Id)
                 .ToListAsync();
@@ -205,7 +205,7 @@ namespace Oversight.Controllers
                 return BadRequest("One or more PermissionIds are invalid.");
 
             // Check if RoleClaim already exists
-            var existingRoleClaim = await _context.RoleClaims
+            var existingRoleClaim = await _context.RoleClaim
                 .FirstOrDefaultAsync(rc => rc.RoleId == roleClaimDto.Id);
 
             if (existingRoleClaim == null)
@@ -220,7 +220,7 @@ namespace Oversight.Controllers
                         Permissions = mp.Permissions.Select(p => new PermissionData { PermissionId = p.PermissionId }).ToList()
                     }).ToList().ToString()
                 };
-                await _context.RoleClaims.AddAsync(newRoleClaim);
+                await _context.RoleClaim.AddAsync(newRoleClaim);
             }
             else
             {
@@ -243,7 +243,7 @@ namespace Oversight.Controllers
         [HttpGet("role-claim/{roleId}")]
         public async Task<IActionResult> GetRoleWithClaims(int roleId)
         {
-            var role = await _context.Roles
+            var role = await _context.Role
                 .Include(r => r.ParentRole)
                 .Include(r => r.RoleClaims)
                 .FirstOrDefaultAsync(r => r.Id == roleId);
