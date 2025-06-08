@@ -6,50 +6,32 @@ namespace db_test.Models;
 public partial class Society
 {
     public Guid Id { get; set; }
-
     public int CountryId { get; set; }
-
     public int StateId { get; set; }
-
     public int CityId { get; set; }
-
-    public string Name { get; set; } = null!;
-
-    public string Description { get; set; } = null!;
-
-    public string SocietyImage { get; set; } = null!;
-
-    public bool IsSuggested { get; set; }
-
-    public string SuggestedBy { get; set; } = null!;
-
+    public string Name { get; set; }
+    public string? Description { get; set; }
+    public string? SocietyImage { get; set; }
+    public bool? IsSuggested { get; set; }
+    public string? SuggestedBy { get; set; }
     public DateTime? SuggestedOn { get; set; }
-
     public int? EntityTypeDetailId { get; set; }
-
-    public bool IsApproved { get; set; }
-
-    public string ApprovedBy { get; set; } = null!;
-
+    public bool? IsApproved { get; set; }
+    public string? ApprovedBy { get; set; }
     public DateTime? ApprovedOn { get; set; }
-
-    public string ApprovedComment { get; set; } = null!;
-
+    public string? ApprovedComment { get; set; }
     public bool IsActive { get; set; }
-
-    public string CreatedBy { get; set; } = null!;
-
+    public string CreatedBy { get; set; }
     public DateTime? CreatedOn { get; set; }
-
     public string? UpdatedBy { get; set; }
-
     public DateTime? UpdatedOn { get; set; }
-
     public bool? IsDeleted { get; set; }
-
     public string? DeletedBy { get; set; }
-
     public DateTime? DeletedOn { get; set; }
+    public string? Longitude { get; set; }
+    public string? Latitude { get; set; }
+    public string? PinCode { get; set; }
+    public string? Address { get; set; }
 
     public virtual City City { get; set; } = null!;
 
