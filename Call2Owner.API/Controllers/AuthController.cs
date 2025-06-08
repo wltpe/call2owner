@@ -918,60 +918,63 @@ namespace Call2Owner.Controllers
 
         public static async Task SeedSuperAdminAsync(DataContext context)
         {
-            var roleHierarchy = new List<(int Id, string RoleName, int? ParentRoleId)>
-                                {
-                                    (301, "SuperAdmin", null),
-                                    (302, "Admin", 301),
-                                    (303, "SocietyAdmin", 302),
-                                    (304, "Resident", 303),
-                                    (305, "Guest", 304)
-                                };
+            //var roleHierarchy = new List<(int Id, string RoleName, int? ParentRoleId)>
+            //                    {
+            //                        (301, "SuperAdmin", null),
+            //                        (302, "Admin", 301),
+            //                        (303, "SocietyAdmin", 302),
+            //                        (304, "Resident", 303),
+            //                        (305, "Guest", 304)
+            //                    };
 
-            var existingRoles = await context.Role.ToDictionaryAsync(r => r.RoleName, r => r);
+            //var existingRoles = await context.Role.ToDictionaryAsync(r => r.RoleName, r => r);
 
-            // Begin transaction to ensure consistency
+            //// Begin transaction to ensure consistency
             using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
 
-                foreach (var (id, roleName, parentRoleId) in roleHierarchy)
-                {
-                    if (!existingRoles.ContainsKey(roleName))
-                    {
-                        var trackedEntity = context.ChangeTracker.Entries<Role>()
-                                                   .FirstOrDefault(e => e.Entity.Id == id);
+                //    foreach (var (id, roleName, parentRoleId) in roleHierarchy)
+                //    {
+                //        if (!existingRoles.ContainsKey(roleName))
+                //        {
+                //            var trackedEntity = context.ChangeTracker.Entries<Role>()
+                //                                       .FirstOrDefault(e => e.Entity.Id == id);
 
-                        if (trackedEntity != null)
-                        {
-                            trackedEntity.State = EntityState.Detached;
-                        }
+                //            if (trackedEntity != null)
+                //            {
+                //                trackedEntity.State = EntityState.Detached;
+                //            }
 
-                        var role = new Role
-                        {
-                            Id = id,
-                            RoleName = roleName,
-                            ParentRoleId = parentRoleId
-                        };
+                //            var role = new Role
+                //            {
+                //                Id = id,
+                //                RoleName = roleName,
+                //                ParentRoleId = parentRoleId
+                //            };
 
-                        await context.Role.AddAsync(role);
+                //            await context.Role.AddAsync(role);
 
-                        existingRoles[roleName] = role;
-                    }
-                }
+                //            existingRoles[roleName] = role;
+                //        }
+                //    }
 
-                await context.SaveChangesAsync();
+                //    await context.SaveChangesAsync();
 
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
 
 
-                await context.SaveChangesAsync();
+                //    await context.SaveChangesAsync();
 
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+
+                var existingRoles = await context.Role.ToListAsync();
 
                 // Seed SuperAdmin user
-                var superAdminRole = existingRoles["SuperAdmin"];
+                var superAdminRole = existingRoles.FirstOrDefault(x => x.RoleName == "SuperAdmin");
+
                 if (superAdminRole != null && !await context.User.AnyAsync(u => u.Email == "superadmin@gmail.com"))
                 {
                     Guid username = Guid.NewGuid();

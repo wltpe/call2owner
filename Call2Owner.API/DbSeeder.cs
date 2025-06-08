@@ -155,8 +155,7 @@ namespace Call2Owner.API
                     {
                         Id = 1,
                         RoleId = 301,
-                        ModulePermissionsJson = @"[
-                        {""ModuleId"":101,""Permissions"":{""PermissionId"":201},""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205},""PermissionId"":206},{""PermissionId"":207},""PermissionId"":208},{""PermissionId"":209}]},
+                        ModulePermissionsJson = @"[{""ModuleId"":101,""Permissions"":{""PermissionId"":201},""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205},""PermissionId"":206},{""PermissionId"":207},""PermissionId"":208},{""PermissionId"":209}]},
                         {""ModuleId"":102,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":103,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":104,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":105,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":106,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":107,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":108,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":109,""Permissions"":[{""PermissionId"":201},{""PermissionId"":202},""PermissionId"":203},{""PermissionId"":204},{""PermissionId"":205}]}
                     ]"
                     },
@@ -164,45 +163,26 @@ namespace Call2Owner.API
                     {
                         Id = 2,
                         RoleId = 302,
-                        ModulePermissionsJson = @"[
-                        {""ModuleId"":101,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":102,""Permissions"":[{""PermissionId"":201},""PermissionId"":202},""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":103,""Permissions"":[{""PermissionId"":204},""PermissionId"":205}]},                        {""ModuleId"":104,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":105,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":107,""Permissions"":[{""PermissionId"":204},""PermissionId"":205}]},                        {""ModuleId"":108,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},                        {""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}
-                    ]"
+                        ModulePermissionsJson =
+                        @"[""ModuleId"":101,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},[{""ModuleId"":102,[{""PermissionId"":201},""PermissionId"":202}],[{""PermissionId"":201},""PermissionId"":202},""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":103,""Permissions"":[{""PermissionId"":204},""PermissionId"":205}]},{""ModuleId"":104,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},""ModuleId"":105,""Permissions"":[{""PermissionId"":204},""PermissionId"":205}]},{""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":107,""Permissions"":[{""PermissionId"":204},""PermissionId"":205}]},{""ModuleId"":108,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}]"
                     },
                     new RoleClaim
                     {
                         Id = 3,
                         RoleId = 303,
-                        ModulePermissionsJson = @"[
-                        {""ModuleId"":101,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":102,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":103,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":104,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":105,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":107,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":108,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}
-                    ]"
+                        ModulePermissionsJson = @"[{""ModuleId"":101,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":102,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":103,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":104,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":105,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":107,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":108,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}]"
                     },
                     new RoleClaim
                     {
                         Id = 4,
                         RoleId = 304,
-                        ModulePermissionsJson = @"[
-                        {""ModuleId"":105,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":107,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},
-                        {""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}
-                    ]"
+                        ModulePermissionsJson = @"[{""ModuleId"":105,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":106,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":107,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]},{""ModuleId"":109,""Permissions"":[{""PermissionId"":204},{""PermissionId"":205}]}]"
                     },
                     new RoleClaim
                     {
                         Id = 5,
                         RoleId = 305,
-                        ModulePermissionsJson = @"[
-                        {""ModuleId"":105,""Permissions"":[{""PermissionId"":204}]},
-                        {""ModuleId"":109,""Permissions"":[{""PermissionId"":204}]}
-                    ]"
+                        ModulePermissionsJson = @"[{""ModuleId"":105,""Permissions"":[{""PermissionId"":204}]},{""ModuleId"":109,""Permissions"":[{""PermissionId"":204}]}]"
                     }
                 );
 
