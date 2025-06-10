@@ -1,4 +1,7 @@
 ﻿using AutoMapper;
+using Call2Owner.DTO;
+using Call2Owner.Models;
+using Call2Owner.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,16 +9,16 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using Call2Owner.DTO;
-using Call2Owner.Models;
-using Call2Owner.Services;
 using RestSharp;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Utilities;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Call2Owner.Controllers
 {
@@ -289,23 +292,24 @@ namespace Call2Owner.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("get-all-society")]
-        public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSociety()
+        [HttpGet("get-all-society-by-city-id")]
+        public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSocietyByCityId(int CityId)
         {
             var societies = await _context.Society
-                .Where(s => s.IsDeleted != true && s.IsActive == true)
-                .OrderByDescending(s => s.CreatedOn)
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.CityId == CityId)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<SocietyDto>>(societies));
         }
 
         [AllowAnonymous]
-        [HttpGet("get-all-Building-by-society-id")]
+        [HttpGet("get-all-building-by-society-id")]
         public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(Guid SocietyId)
         {
             var societyBuildings = await _context.SocietyBuilding
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyId == SocietyId)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<SocietyBuildingDTO>>(societyBuildings));
@@ -317,10 +321,177 @@ namespace Call2Owner.Controllers
         {
             var societyBuildingFlats = await _context.SocietyFlat
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyBuildingId == SocietyBuildingId)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<SocietyFlatDTO>>(societyBuildingFlats));
         }
+
+        [HttpGet("resident-types")]
+        public async Task<IActionResult> GetResidentTypes(int EntityTypeId)
+        {
+            var result = await _context.EntityTypeDetail
+       .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == EntityTypeId)
+       .OrderBy(d => d.Id)
+       .GroupBy(d => new
+       {
+           d.EntityType.Id,
+           d.EntityType.Name,
+           d.EntityType.Label
+       })
+       .Select(group => new
+       {
+           id = group.Key.Id,
+           name = group.Key.Name,
+           label = group.Key.Label,
+           details = group.Select(d => new
+           {
+               entityTypeDetailId = d.Id,
+               entityTypeId = d.EntityTypeId,
+               value = d.Value,
+               label = d.Label
+           }).ToList()
+       })
+       .ToListAsync();
+
+            return Ok(result);
+        }
+
+        [HttpGet("resident-update-form-fields")]
+        public async Task<IActionResult> GetResidentTypeFormFields(ResidentUpdateFormFields obj)
+        {
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            int ResidentTypeId = 3;
+            var targetType = "pdf";
+
+            var getAllEntityTypeDetailByEntityTypeId = await _context.EntityTypeDetail
+       .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == ResidentTypeId)
+       .FirstOrDefaultAsync();
+
+            if (getAllEntityTypeDetailByEntityTypeId !=null)
+            {
+                if (getAllEntityTypeDetailByEntityTypeId.EntityTypeId == obj.EntityTypeId && getAllEntityTypeDetailByEntityTypeId.Id == obj.EntityTypeDetailId)
+                {
+                    // nothing to do
+                }
+                else
+                {
+                    return NotFound();
+                }
+            }
+            else
+            {
+                return NotFound();
+            }
+
+                var jsonString = await _context.EntityTypeDetail
+           .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == obj.EntityTypeDetailId)
+           .FirstOrDefaultAsync();
+
+            if (string.IsNullOrEmpty(jsonString.DetailJson))
+                return NotFound();
+
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                };
+
+                List<ResidentDocument>? documents = System.Text.Json.JsonSerializer.Deserialize<List<ResidentDocument>>(jsonString.DetailJson, options);
+               
+
+                if (documents != null)
+                {
+      
+
+
+                    var IsType = documents
+                        .Where(doc => doc.Details != null && doc.Details.Any(detail =>
+                            detail.Type != null))
+                        .ToList();
+
+                    if (IsType.Count > 0)
+                    {
+                        
+                        var matchingDocuments = documents
+                            .Where(doc => doc.Details != null && doc.Details.Any(detail =>
+                                detail.Type.Any(t => string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase))
+                            ))
+                            .ToList();
+
+                        if (matchingDocuments.Count > 0 )
+                        {
+                            //noting to do
+                        }
+                        else
+                        {
+                            return NotFound();
+                        }
+
+                    }
+                    else
+                    {
+                        // nothing to do
+                    }
+
+
+                }
+                else
+                {
+                    return BadRequest();
+                }
+
+                var blobName = "";
+
+                // Upload file
+                if (obj.File is not null)
+                {
+                    blobName = await UploadFileOrImageFolderAsync(obj.File.FileName, obj.File.OpenReadStream());
+                }
+                else
+                {
+                    blobName = null;
+                }
+                Guid Id = Guid.NewGuid();
+
+                Guid residentDocumentId = documents
+                                            .Where(doc => doc.ResidentDocumentRequiredToRegisterId != null)
+                                            .Select(doc => doc.ResidentDocumentRequiredToRegisterId)
+                                            .FirstOrDefault();
+
+                var residentDocumentUploaded = new ResidentDocumentUploaded()
+                {
+                    Id = Id,
+                    ResidentId = Guid.Parse(currentUserId),
+                    ResidentDocumentRequiredToRegisterId = residentDocumentId,
+                    Name = obj.Name,
+                    Url = blobName,
+                    IsActive = true,
+                    CreatedBy = currentUserId,
+                    CreatedOn = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                var userDetal = await AddResidentDocumentUploadedAsync(residentDocumentUploaded);
+                if (userDetal == null)
+                {
+                    return Ok("Invalid or expired token");
+                }
+                else
+                {
+                    return Ok(userDetal);
+                }
+
+                return Ok(documents);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest("Invalid JSON format.");
+            }
+        }
+
 
         private string GenerateJwtToken(User user, string modulePermissions)
         {
@@ -381,6 +552,121 @@ namespace Call2Owner.Controllers
                 return null;
             }
         }
+
+        private async Task<string> UploadFileOrImageFolderAsync(string blobName, Stream imageStream)
+        {
+            // Ensure blobName is sanitized to prevent path traversal attacks
+            if (string.IsNullOrWhiteSpace(blobName))
+            {
+                throw new ArgumentException("Invalid blob name", nameof(blobName));
+            }
+
+            // Define the IIS folder path
+            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wltpe_images", "images", "profile-images");
+
+            // Ensure the folder exists
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            // Combine the folder path and file name to create the full file path
+            string filePath = Path.Combine(folderPath, blobName);
+
+            try
+            {
+                // Save the file stream to the IIS folder
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    await imageStream.CopyToAsync(fileStream);
+                }
+
+                // Generate the URL to access the uploaded file
+                string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+
+
+                return fileUrl; // Return the accessible file URL
+            }
+            catch (Exception ex)
+            {
+                // Log and rethrow the exception
+                throw new InvalidOperationException("An error occurred while uploading the file/image.", ex);
+            }
+        }
+        public async Task<ResidentDocumentUploaded?> AddResidentDocumentUploadedAsync(ResidentDocumentUploaded obj)
+        {
+            // Check if a record already exists
+            var userExists = await _context.ResidentDocumentUploaded.FirstOrDefaultAsync(x =>
+                                    x.ResidentId == obj.ResidentId
+                                    && x.ResidentDocumentRequiredToRegisterId == obj.ResidentDocumentRequiredToRegisterId
+                                    && x.IsDeleted != true
+                                    && x.IsActive == true);
+
+            if (userExists == null)
+            {
+                // Directly add the obj to the context
+                await _context.ResidentDocumentUploaded.AddAsync(obj);
+
+                // Save changes to the database
+                await _context.SaveChangesAsync();
+
+                return obj;
+            }
+            else
+            {
+                // Return null if the record exists
+                return null;
+            }
+        }
+
+
+
+    }
+
+    public class FormField
+    {
+
+        [JsonPropertyName("fieldText")]
+        public string? FieldText { get; set; }
+
+        [JsonPropertyName("fieldType")]
+        public string? FieldType { get; set; }
+
+        [JsonPropertyName("required")]
+        public bool? Required { get; set; }
+
+        [JsonPropertyName("isActive")]
+        public bool? IsActive { get; set; }
+
+        [JsonPropertyName("fieldId")]
+        public string? FieldId { get; set; }
+
+        [JsonPropertyName("fieldName")]
+        public string? FieldName { get; set; }
+
+        [JsonPropertyName("min")]
+        public DateTime? Min { get; set; }
+
+        [JsonPropertyName("type")]
+        public List<string>? Type { get; set; }
+
+    }
+    public class ResidentDocument
+    {
+        [JsonPropertyName("ResidentDocumentRequiredToRegisterId")]
+        public Guid ResidentDocumentRequiredToRegisterId { get; set; }
+
+        [JsonPropertyName("Details")]
+        public List<FormField>? Details { get; set; }
+    }
+
+    public class ResidentUpdateFormFields {
+        public int EntityTypeId { get; set; }
+        public int EntityTypeDetailId { get; set; }
+        public string Name { get; set; }
+        public string? FileOrImage { get; set; }
+        // public string? Address { get; set; }
+        public IFormFile? File { get; set; }
     }
 
 }

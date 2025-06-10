@@ -58,8 +58,8 @@ namespace Call2Owner.Controllers
 
         #region Public Methods
 
-        [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.Add)]
+      //  [Authorize(Policy = Utilities.Module.UserManagement)]
+       // [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("register")]
 
         public async Task<IActionResult> Register([FromBody] UserDto model)
@@ -88,7 +88,7 @@ namespace Call2Owner.Controllers
             if (currentUser.RoleId == Convert.ToInt32(UserRoles.Admin))
             {
                 // Forcefully assign InsurerCustomer role, no need for client to send it
-                model.RoleId = Convert.ToInt32(UserRoles.Resident);
+                model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
             }
 
             if (await _context.User.AnyAsync(u => u.Email == model.Email))

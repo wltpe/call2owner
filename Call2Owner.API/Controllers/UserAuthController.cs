@@ -140,7 +140,7 @@ namespace Call2Owner.Controllers
 
 
 
-            var existingUser = await _context.Users
+            var existingUser = await _context.User
                                              .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber || u.Email == dto.Email);
 
             if (existingUser == null)
@@ -158,7 +158,7 @@ namespace Call2Owner.Controllers
             existingUser.UpdatedOn = DateTime.UtcNow;
 
 
-            _context.Users.Update(existingUser);
+            _context.User.Update(existingUser);
             await _context.SaveChangesAsync();
 
             var message = $"Your one time password to {otp} into WLTPE is sign-in. Valid for 10 mins.Do not share your OTP with anyone-Yoke payment";

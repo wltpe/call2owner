@@ -11,9 +11,9 @@ public partial class SocietyBuilding
 
     public string Name { get; set; } = null!;
 
-    public string Description { get; set; } = null!;
+    public string? Description { get; set; } = null!;
 
-    public string BuildingImage { get; set; } = null!;
+    public string? BuildingImage { get; set; } = null!;
 
     public bool IsFavourite { get; set; }
 

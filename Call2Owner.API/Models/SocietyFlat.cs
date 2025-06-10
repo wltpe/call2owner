@@ -13,9 +13,9 @@ public partial class SocietyFlat
 
     public string Name { get; set; } = null!;
 
-    public string Description { get; set; } = null!;
+    public string? Description { get; set; }
 
-    public string FlatImage { get; set; } = null!;
+    public string? FlatImage { get; set; }
 
     public bool IsFavourite { get; set; }
 
