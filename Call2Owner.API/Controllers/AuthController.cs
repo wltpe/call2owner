@@ -60,7 +60,6 @@ namespace Call2Owner.Controllers
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
         [Authorize(Policy = Utilities.Permission.Add)]
-        [Authorize]
         [HttpPost("register")]
 
         public async Task<IActionResult> Register([FromBody] UserDto model)

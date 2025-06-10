@@ -59,7 +59,7 @@ namespace Call2Owner.Controllers
         [Authorize(Policy = Utilities.Permission.Add)]
         [Authorize]
         [AllowAnonymous]
-        [HttpPost("register-self-resident")]
+        [HttpPost("resident-self-register")]
         public async Task<IActionResult> SelfRegisterResident([FromBody] UserResidentDto dto)
         {
             if (dto == null || (dto.Email == null && dto.MobileNumber == null))
@@ -123,8 +123,53 @@ namespace Call2Owner.Controllers
             return Ok(new { message = "OTP sent successfully!" });
         }
 
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Add)]
+        [Authorize]
         [AllowAnonymous]
-        [HttpPost("login")]
+        [HttpPost("resident-login")]
+        public async Task<IActionResult> LoginResident([FromBody] LoginResidentDto dto)
+        {
+            if (dto.Email == null && dto.MobileNumber == null)
+            {
+                return BadRequest("Invalid request: Email or Mobile Number is required.");
+            }
+
+            OTPGenerator otpGenerator = new OTPGenerator();
+            string otp = otpGenerator.GenerateOTP();
+
+
+
+            var existingUser = await _context.Users
+                                             .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber || u.Email == dto.Email);
+
+            if (existingUser == null)
+            {
+                return BadRequest("User not exist.");
+            }
+
+            // Update OTP for existing user
+            existingUser.Otp = otp;
+            existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
+            existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
+            existingUser.IsActive = true;
+            existingUser.IsVerified = true;
+            existingUser.UpdatedBy = existingUser.Id.ToString();
+            existingUser.UpdatedOn = DateTime.UtcNow;
+
+
+            _context.Users.Update(existingUser);
+            await _context.SaveChangesAsync();
+
+            var message = $"Your one time password to {otp} into WLTPE is sign-in. Valid for 10 mins.Do not share your OTP with anyone-Yoke payment";
+
+            await SendOtpAsync(existingUser.MobileNumber, message);
+
+            return Ok(new { message = "OTP sent to your registered mobile number!" });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("resident-verify-otp")]
         public async Task<IActionResult> Login([FromBody] LoginSelfDto model)
         {
             _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);

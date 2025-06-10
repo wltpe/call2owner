@@ -257,8 +257,9 @@ namespace Call2Owner.Controllers
         public async Task<ActionResult<IEnumerable<CountryDto>>> GetAllCountry()
         {
             var countries = await _context.Country
-                .Where(s => s.IsDeleted != true && s.IsActive == true)
-                .ToListAsync();
+         .Where(s => s.IsDeleted != true && s.IsActive == true)
+         .OrderBy(s => s.DisplayOrder)
+         .ToListAsync();
 
             return Ok(_mapper.Map<List<CountryDto>>(countries));
         }
@@ -269,6 +270,7 @@ namespace Call2Owner.Controllers
         {
             var states = await _context.State
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.CountryId == CountryId)
+                .OrderBy(s => s.DisplayOrder)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<StateDto>>(states));
@@ -280,6 +282,7 @@ namespace Call2Owner.Controllers
         {
             var cities = await _context.City
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.StateId == StateId)
+                .OrderBy(s => s.DisplayOrder)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<CityDto>>(cities));
@@ -291,6 +294,7 @@ namespace Call2Owner.Controllers
         {
             var societies = await _context.Society
                 .Where(s => s.IsDeleted != true && s.IsActive == true)
+                .OrderByDescending(s => s.CreatedOn)
                 .ToListAsync();
 
             return Ok(_mapper.Map<List<SocietyDto>>(societies));
