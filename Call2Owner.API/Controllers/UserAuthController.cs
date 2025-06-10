@@ -70,7 +70,7 @@ namespace Call2Owner.Controllers
             OTPGenerator otpGenerator = new OTPGenerator();
             string otp = otpGenerator.GenerateOTP();
 
-            var existingUser = await _context.Users
+            var existingUser = await _context.User
                                              .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
 
             Guid Username = Guid.NewGuid();
@@ -87,7 +87,7 @@ namespace Call2Owner.Controllers
                 existingUser.UpdatedOn = DateTime.UtcNow;
 
 
-                _context.Users.Update(existingUser);
+                _context.User.Update(existingUser);
             }
             else
             {
@@ -111,7 +111,7 @@ namespace Call2Owner.Controllers
                     CreatedOn=DateTime.UtcNow
                 };
 
-                await _context.Users.AddAsync(newUser);
+                await _context.User.AddAsync(newUser);
             }
 
             await _context.SaveChangesAsync();
@@ -174,7 +174,7 @@ namespace Call2Owner.Controllers
         {
             _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaims)
                 .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);

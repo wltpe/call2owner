@@ -11,6 +11,7 @@ using System.Text;
 using Utilities;
 using Microsoft.EntityFrameworkCore;
 using Call2Owner.Models;
+using Call2Owner.API;
 
 var publicEndpoints = new HashSet<string>
 {
@@ -152,26 +153,11 @@ builder.Services.AddSingleton(sp => new RestClient());
 
 var app = builder.Build();
 
-//app.Use(async (context, next) =>
-//{
-//    if (context.Request.Path.StartsWithSegments("/swagger") ||
-//        context.Request.Path.StartsWithSegments("/swagger/index.html") ||
-//        context.Request.Path.StartsWithSegments("/swagger/v1/swagger.json"))
-//    {
-//        await next();
-//        return;
-//    }
-
-//    //if (!context.Request.Headers.ContainsKey("X-From-Gateway") ||
-//    //    context.Request.Headers["X-From-Gateway"] != "true")
-//    //{
-//    //    context.Response.StatusCode = StatusCodes.Status403Forbidden;
-//    //    await context.Response.WriteAsync("Access denied. Use API Gateway.");
-//    //    return;
-//    //}
-
-//    await next();
-//});
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+    DbSeeder.SeedIfNotExists(context);
+}
 
 app.UseCors(options => options.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 

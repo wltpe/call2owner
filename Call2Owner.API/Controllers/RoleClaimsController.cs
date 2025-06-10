@@ -28,7 +28,7 @@ namespace Call2Owner.Controllers
         [HttpGet]
         //public async Task<ActionResult<IEnumerable<RoleClaim>>> GetRoleClaims()
         //{
-        //    var roleClaims = await _context.RoleClaims
+        //    var roleClaims = await _context.RoleClaim
         //        .Include(rc => rc.ModulePermission)
         //        .Include(rc => rc.Role)
         //        .ToListAsync();
@@ -41,7 +41,7 @@ namespace Call2Owner.Controllers
         [HttpGet("GetRolesModulesPermissions")]
         public async Task<ActionResult<IEnumerable<object>>> GetRolesModulesPermissions()
         {
-            var roles = await _context.Roles
+            var roles = await _context.Role
                 .Select(rc => new
                 {
                     rc.Id,
@@ -67,7 +67,7 @@ namespace Call2Owner.Controllers
         [HttpGet("GetRoleClaims")]
         public async Task<ActionResult<IEnumerable<object>>> GetRoleClaims()
         {
-            var roles = await _context.RoleClaims
+            var roles = await _context.RoleClaim
                 .Include(rc => rc.Role)
                 .Select(rc => new
                 {
@@ -86,7 +86,7 @@ namespace Call2Owner.Controllers
         //[HttpGet("{id}")]
         //public async Task<ActionResult<RoleClaim>> GetRoleClaim(int id)
         //{
-        //    var roleClaim = await _context.RoleClaims
+        //    var roleClaim = await _context.RoleClaim
         //        .Include(rc => rc.ModulePermission)
         //        .Include(rc => rc.Role)
         //        .FirstOrDefaultAsync(rc => rc.Id == id);
@@ -102,7 +102,7 @@ namespace Call2Owner.Controllers
         //[HttpPost]       
         //public async Task<ActionResult> CreateOrUpdateRoleClaim(RoleClaimInputDto roleClaimDto)
         //{
-        //    var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
+        //    var role = await _context.Role.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
 
         //    if (role == null)
         //    {
@@ -111,11 +111,11 @@ namespace Call2Owner.Controllers
         //            RoleName = roleClaimDto.RoleName,
         //        };
 
-        //        _context.Roles.Add(role);
+        //        _context.Role.Add(role);
         //        await _context.SaveChangesAsync();
         //    }
 
-        //    var existingClaims = await _context.RoleClaims
+        //    var existingClaims = await _context.RoleClaim
         //        .Where(rc => rc.RoleId == role.Id)
         //        .Select(rc => rc.ModulePermissionId)
         //        .ToListAsync();
@@ -131,7 +131,7 @@ namespace Call2Owner.Controllers
 
         //    if (newClaims.Any())
         //    {
-        //        await _context.RoleClaims.AddRangeAsync(newClaims);
+        //        await _context.RoleClaim.AddRangeAsync(newClaims);
         //        await _context.SaveChangesAsync();
         //    }
 
@@ -141,7 +141,7 @@ namespace Call2Owner.Controllers
         [HttpPost("create-or-update-role-claim")]
         //    public async Task<ActionResult> CreateOrUpdateRoleClaim(RoleClaimNewDto roleClaimDto)
         //    {
-        //        var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
+        //        var role = await _context.Role.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
 
         //        if (role == null)
         //        {
@@ -150,12 +150,12 @@ namespace Call2Owner.Controllers
         //                RoleName = roleClaimDto.RoleName
         //            };
 
-        //            _context.Roles.Add(role);
+        //            _context.Role.Add(role);
         //            await _context.SaveChangesAsync();
         //        }
 
         //        // Fetch existing role claims for this role
-        //        var existingClaims = await _context.RoleClaims
+        //        var existingClaims = await _context.RoleClaim
         //            .Where(rc => rc.RoleId == role.Id)
         //            .Select(rc => rc.ModulePermissionId)
         //            .ToListAsync();
@@ -190,7 +190,7 @@ namespace Call2Owner.Controllers
 
         //        if (newClaims.Any())
         //        {
-        //            await _context.RoleClaims.AddRangeAsync(newClaims);
+        //            await _context.RoleClaim.AddRangeAsync(newClaims);
         //            await _context.SaveChangesAsync();
         //        }
 
@@ -206,7 +206,7 @@ namespace Call2Owner.Controllers
 
         //public async Task<ActionResult> CreateOrUpdateRoleClaim(RoleClaimNewDto roleClaimDto)
         //{
-        //    var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
+        //    var role = await _context.Role.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
 
         //    if (role == null)
         //    {
@@ -215,12 +215,12 @@ namespace Call2Owner.Controllers
         //            RoleName = roleClaimDto.RoleName
         //        };
 
-        //        _context.Roles.Add(role);
+        //        _context.Role.Add(role);
         //        await _context.SaveChangesAsync();
         //    }
 
         //    // Fetch existing role claims for this role
-        //    var existingClaims = await _context.RoleClaims
+        //    var existingClaims = await _context.RoleClaim
         //        .Where(rc => rc.RoleId == role.Id)
         //        .Select(rc => rc.ModulePermissionIdsJson)
         //        .ToListAsync();
@@ -275,7 +275,7 @@ namespace Call2Owner.Controllers
 
         //    if (newClaims.Any())
         //    {
-        //        await _context.RoleClaims.AddRangeAsync(newClaims);
+        //        await _context.RoleClaim.AddRangeAsync(newClaims);
         //        await _context.SaveChangesAsync();
         //    }
 
@@ -290,17 +290,17 @@ namespace Call2Owner.Controllers
 
         //public async Task<ActionResult> CreateOrUpdateRoleClaim(RoleClaimNewDto roleClaimDto)
         //{
-        //    var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
+        //    var role = await _context.Role.FirstOrDefaultAsync(r => r.RoleName == roleClaimDto.RoleName);
 
         //    if (role == null)
         //    {
         //        role = new Role { RoleName = roleClaimDto.RoleName };
-        //        _context.Roles.Add(role);
+        //        _context.Role.Add(role);
         //        await _context.SaveChangesAsync();
         //    }
 
         //    // Fetch existing role claims for this role
-        //    var existingClaimsJson = await _context.RoleClaims
+        //    var existingClaimsJson = await _context.RoleClaim
         //        .Where(rc => rc.RoleId == role.Id)
         //        .Select(rc => rc.ModulePermissionsJson)
         //        .FirstOrDefaultAsync();
@@ -334,7 +334,7 @@ namespace Call2Owner.Controllers
         //    {
         //        var permissionsJson = JsonSerializer.Serialize(newPermissions);
 
-        //        var roleClaim = await _context.RoleClaims.FirstOrDefaultAsync(rc => rc.RoleId == role.Id);
+        //        var roleClaim = await _context.RoleClaim.FirstOrDefaultAsync(rc => rc.RoleId == role.Id);
 
         //        if (roleClaim == null)
         //        {
@@ -343,12 +343,12 @@ namespace Call2Owner.Controllers
         //                RoleId = role.Id,
         //                ModulePermissionsJson = permissionsJson
         //            };
-        //            _context.RoleClaims.Add(roleClaim);
+        //            _context.RoleClaim.Add(roleClaim);
         //        }
         //        else
         //        {
         //            roleClaim.ModulePermissionIdsJson = permissionsJson;
-        //            _context.RoleClaims.Update(roleClaim);
+        //            _context.RoleClaim.Update(roleClaim);
         //        }
 
         //        await _context.SaveChangesAsync();
@@ -367,7 +367,7 @@ namespace Call2Owner.Controllers
         //[HttpPut("{roleId}")]
         //public async Task<IActionResult> UpdateRoleClaim(int roleId, RoleClaimEditDto roleClaimDto)
         //{
-        //    var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == roleId);
+        //    var role = await _context.Role.FirstOrDefaultAsync(r => r.Id == roleId);
         //    if (role == null)
         //    {
         //        return BadRequest("Invalid Role");
@@ -379,8 +379,8 @@ namespace Call2Owner.Controllers
         //        role.RoleName = roleClaimDto.RoleName;
         //    }
 
-        //    var existingClaims = _context.RoleClaims.Where(rc => rc.RoleId == roleId);
-        //    _context.RoleClaims.RemoveRange(existingClaims);
+        //    var existingClaims = _context.RoleClaim.Where(rc => rc.RoleId == roleId);
+        //    _context.RoleClaim.RemoveRange(existingClaims);
 
         //    var newRoleClaims = roleClaimDto.ModulePermission.Select(moduleId => new RoleClaim
         //    {
@@ -388,7 +388,7 @@ namespace Call2Owner.Controllers
         //        ModulePermissionId = moduleId
         //    }).ToList();
 
-        //    await _context.RoleClaims.AddRangeAsync(newRoleClaims);
+        //    await _context.RoleClaim.AddRangeAsync(newRoleClaims);
         //    await _context.SaveChangesAsync();
 
         //    return Ok(new { roleClaimDto.RoleName, roleClaimDto.ModulePermission });
@@ -397,7 +397,7 @@ namespace Call2Owner.Controllers
         //[HttpPost("{roleId}")]
         //public async Task<IActionResult> UpdateRoleClaim(int roleId, RoleClaimEditDto roleClaimDto)
         //{
-        //    var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == roleId);
+        //    var role = await _context.Role.FirstOrDefaultAsync(r => r.Id == roleId);
         //    if (role == null)
         //    {
         //        return BadRequest("Invalid Role");
@@ -405,7 +405,7 @@ namespace Call2Owner.Controllers
 
         //    // Check if the new role name already exists
         //    if (!string.IsNullOrWhiteSpace(roleClaimDto.RoleName) &&
-        //        await _context.Roles.AnyAsync(r => r.RoleName == roleClaimDto.RoleName && r.Id != roleId))
+        //        await _context.Role.AnyAsync(r => r.RoleName == roleClaimDto.RoleName && r.Id != roleId))
         //    {
         //        return BadRequest("Role name already exists.");
         //    }
@@ -416,8 +416,8 @@ namespace Call2Owner.Controllers
         //        role.RoleName = roleClaimDto.RoleName;
         //    }
 
-        //    var existingClaims = _context.RoleClaims.Where(rc => rc.RoleId == roleId);
-        //    _context.RoleClaims.RemoveRange(existingClaims);
+        //    var existingClaims = _context.RoleClaim.Where(rc => rc.RoleId == roleId);
+        //    _context.RoleClaim.RemoveRange(existingClaims);
 
         //    var newRoleClaims = roleClaimDto.ModulePermission.Select(moduleId => new RoleClaim
         //    {
@@ -425,7 +425,7 @@ namespace Call2Owner.Controllers
         //        ModulePermissionId = moduleId
         //    }).ToList();
 
-        //    await _context.RoleClaims.AddRangeAsync(newRoleClaims);
+        //    await _context.RoleClaim.AddRangeAsync(newRoleClaims);
         //    await _context.SaveChangesAsync();
 
         //    return Ok(new { roleClaimDto.RoleName, roleClaimDto.ModulePermission });
@@ -437,7 +437,7 @@ namespace Call2Owner.Controllers
         [HttpGet("{roleId}")]
         public async Task<ActionResult<IEnumerable<RoleClaim>>> GetRoleClaimsByRoleId(int roleId)
         {
-            var roleClaims = await _context.RoleClaims.Where(rc => rc.RoleId == roleId).ToListAsync();
+            var roleClaims = await _context.RoleClaim.Where(rc => rc.RoleId == roleId).ToListAsync();
             if (!roleClaims.Any())
             {
                 return NotFound("No claims found for this role");
@@ -452,7 +452,7 @@ namespace Call2Owner.Controllers
         //public async Task<IActionResult> GetRolesAndPermissions()
         //{
         //    // Fetch roles
-        //    var roles = await _context.Roles
+        //    var roles = await _context.Role
         //        .Select(r => new
         //        {
         //            RoleName = r.RoleName,
@@ -493,7 +493,7 @@ namespace Call2Owner.Controllers
         //public async Task<IActionResult> GetRolesAndPermissions()
         //{
         //    // Fetch roles
-        //    var roles = await _context.Roles
+        //    var roles = await _context.Role
         //        .Select(r => new
         //        {
         //            RoleName = r.RoleName,
@@ -542,7 +542,7 @@ namespace Call2Owner.Controllers
         //public async Task<IActionResult> GetRolePermissionsById(int roleId)
         //{
         //    // Fetch the role by ID
-        //    var role = await _context.Roles
+        //    var role = await _context.Role
         //        .Where(r => r.Id == roleId)
         //        .Select(r => new
         //        {
@@ -558,7 +558,7 @@ namespace Call2Owner.Controllers
         //    }
 
         //    // Fetch permissions assigned to the role
-        //    var rolePermissions = await _context.RoleClaims
+        //    var rolePermissions = await _context.RoleClaim
         //        .Where(rp => rp.RoleId == roleId)
         //        .Include(rp => rp.ModulePermission)
         //        .ThenInclude(mp => mp.Module)

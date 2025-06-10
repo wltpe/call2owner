@@ -25,13 +25,13 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<EntityType> EntityType { get; set; }
 
-    public virtual DbSet<EntityTypeDetail> EntityTypeDetails { get; set; }
+    public virtual DbSet<EntityTypeDetail> EntityTypeDetail { get; set; }
 
     public virtual DbSet<Module> Module { get; set; }
 
-    public virtual DbSet<ModulePermission> ModulePermissions { get; set; }
+    public virtual DbSet<ModulePermission> ModulePermission { get; set; }
 
-    public virtual DbSet<Permission> Permissions { get; set; }
+    public virtual DbSet<Permission> Permission { get; set; }
 
     public virtual DbSet<Resident> Resident { get; set; }
 
@@ -43,15 +43,15 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<ResidentFrequentlyEntry> ResidentFrequentlyEntry { get; set; }
 
-    public virtual DbSet<ResidentFrequentlyGuest> ResidentFrequentlyGuests { get; set; }
+    public virtual DbSet<ResidentFrequentlyGuest> ResidentFrequentlyGuest { get; set; }
 
     public virtual DbSet<ResidentPet> ResidentPet { get; set; }
 
     public virtual DbSet<ResidentVehicle> ResidentVehicle { get; set; }
 
-    public virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<Role> Role { get; set; }
 
-    public virtual DbSet<RoleClaim> RoleClaims { get; set; }
+    public virtual DbSet<RoleClaim> RoleClaim { get; set; }
 
     public virtual DbSet<Society> Society { get; set; }
 
@@ -65,7 +65,7 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<State> State { get; set; }
 
-    public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<User> User { get; set; }
 
     public virtual DbSet<UserParent> UserParent { get; set; }
 

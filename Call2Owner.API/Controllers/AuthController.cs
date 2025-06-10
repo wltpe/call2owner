@@ -69,7 +69,7 @@ namespace Call2Owner.Controllers
             if (currentUserId == "0")
                 return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
+            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
             if (currentUser == null)
                 return Unauthorized(new { message = "User not found or unauthorized." });
 
@@ -91,7 +91,7 @@ namespace Call2Owner.Controllers
                 model.RoleId = Convert.ToInt32(UserRoles.Resident);
             }
 
-            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+            if (await _context.User.AnyAsync(u => u.Email == model.Email))
                 return BadRequest(new { message = "Email already exists!" });
 
 
@@ -101,7 +101,7 @@ namespace Call2Owner.Controllers
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Roles.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
             if (!validChildRole && role != UserRoles.SuperAdmin)
                 return Forbid("You do not have permission to assign this role.");
 
@@ -133,7 +133,7 @@ namespace Call2Owner.Controllers
            //     ResetLink = resetLink
             };
 
-            await _context.Users.AddAsync(user);
+            await _context.User.AddAsync(user);
             await _context.SaveChangesAsync();
 
 
@@ -182,7 +182,7 @@ namespace Call2Owner.Controllers
 
             Guid userId = new Guid(userIdClaim.Value);
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -212,7 +212,7 @@ namespace Call2Owner.Controllers
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequest("Email is required.");
 
-            var user = await _context.Users
+            var user = await _context.User
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if (user == null)
@@ -255,7 +255,7 @@ namespace Call2Owner.Controllers
             _logger.LogInformation("This is a test log from Application Insights");
             _logger.LogError("This is a test log from Application Insights");
 
-            var user = await _context.Users
+            var user = await _context.User
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaims) // Include RoleClaims under Role
                 .FirstOrDefaultAsync(u => u.Email == model.Email);
@@ -337,7 +337,7 @@ namespace Call2Owner.Controllers
         [HttpPost("send-reset-link")]
         public async Task<IActionResult> SendResetLink([FromQuery] string email)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
                 return BadRequest(new { message = "User not found." });
 
@@ -365,7 +365,7 @@ namespace Call2Owner.Controllers
         [HttpPost("forget-password/{email}")]
         public async Task<IActionResult> ForgetPassword(string email)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
                 return BadRequest(new { message = "User not found." });
 
@@ -435,7 +435,7 @@ namespace Call2Owner.Controllers
         //        }
 
         //        // Find user by token
-        //        var user = await _context.Usersss.FirstOrDefaultAsync(u => u.Email == email);
+        //        var user = await _context.Userss.FirstOrDefaultAsync(u => u.Email == email);
         //        if (user == null)
         //            return NotFound(new { message = "Invalid email.", ResendToken = false });
 
@@ -510,7 +510,7 @@ namespace Call2Owner.Controllers
                 }
 
                 // Find user by token
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                var user = await _context.User.FirstOrDefaultAsync(u => u.Email == email);
                 if (user == null)
                     return NotFound(new { message = "Invalid email.", ResendToken = false });
 
@@ -571,7 +571,7 @@ namespace Call2Owner.Controllers
                 return Unauthorized("Role not found in token");
 
             // Find the Role ID of the Logged-in User
-            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Id.ToString() == role);
+            var userRole = await _context.Role.FirstOrDefaultAsync(r => r.Id.ToString() == role);
             if (userRole == null)
                 return NotFound("Role not found in database");
 
@@ -585,7 +585,7 @@ namespace Call2Owner.Controllers
                 return NotFound("No child roles found");
 
             // Fetch Users belonging to those roles
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => childRoleIds.Contains(u.RoleId))
                 .ToListAsync();
 
@@ -599,7 +599,7 @@ namespace Call2Owner.Controllers
         [HttpGet("getAllRoles")]
         public async Task<IActionResult> GetAllRoles()
         {
-            var roles = await _context.Roles
+            var roles = await _context.Role
                 .Select(r => new RoleDtoOutput
                 {
                     RoleId = r.Id,
@@ -614,7 +614,7 @@ namespace Call2Owner.Controllers
         [HttpGet("getAllUsers")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
@@ -633,7 +633,7 @@ namespace Call2Owner.Controllers
         [HttpGet("brokerList")]
         public async Task<IActionResult> BrokerList()
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => u.RoleId == Convert.ToInt32(UserRoles.Admin))
                 .Select(u => new UsersDtoOutput
                 {
@@ -654,7 +654,7 @@ namespace Call2Owner.Controllers
         //[HttpGet("brokerById/{brokerId}")]
         //public async Task<IActionResult> BrokerById(int brokerId)
         //{
-        //    var users = await _context.Userss
+        //    var users = await _context.Users
         //        .Where(u => u.Id == brokerId)
         //        .Select(u => new UsersDtoOutput
         //        {
@@ -676,9 +676,9 @@ namespace Call2Owner.Controllers
         //public async Task<IActionResult> UserParentList()
         //{
         //    var usersParentList = await (
-        //        from up in _context.UsersParents
-        //        join user in _context.Userss on up.UsersId equals user.Id
-        //        join parent in _context.Userss on up.ParentId equals parent.Id
+        //        from up in _context.UserParents
+        //        join user in _context.Users on up.UsersId equals user.Id
+        //        join parent in _context.Users on up.ParentId equals parent.Id
         //        select new
         //        {
         //            UserId = up.UserId,
@@ -713,17 +713,17 @@ namespace Call2Owner.Controllers
         //    if (currentUserId == 0)
         //        return Unauthorized(new { message = "Invalid user." });
 
-        //    var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
+        //    var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
         //    if (currentUser == null)
         //        return Unauthorized(new { message = "User not found or unauthorized." });
         //    // Validate parent
-        //    var parentUser = await _context.Users.FindAsync(model.ParentId);
+        //    var parentUser = await _context.User.FindAsync(model.ParentId);
         //    if (parentUser == null)
         //    {
         //        return NotFound(new { message = "Parent user not found." });
         //    }
 
-        //    var validUserIds = await _context.Users
+        //    var validUserIds = await _context.User
         //        .Where(u => model.UserIds.Contains(u.Id))
         //        .Select(u => u.Id)
         //        .ToListAsync();
@@ -771,19 +771,19 @@ namespace Call2Owner.Controllers
         //    if (currentUserId == 0)
         //        return Unauthorized(new { message = "Invalid user." });
 
-        //    var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
+        //    var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
         //    if (currentUser == null)
         //        return Unauthorized(new { message = "User not found or unauthorized." });
 
         //    // Validate parent
-        //    var parentUser = await _context.Users.FindAsync(model.ParentId);
+        //    var parentUser = await _context.User.FindAsync(model.ParentId);
         //    if (parentUser == null)
         //    {
         //        return NotFound(new { message = "Parent user not found." });
         //    }
 
         //    // Get only valid user IDs from the request
-        //    var validUserIds = await _context.Users
+        //    var validUserIds = await _context.User
         //        .Where(u => model.UserIds.Contains(u.Id))
         //        .Select(u => u.Id)
         //        .ToListAsync();
@@ -824,7 +824,7 @@ namespace Call2Owner.Controllers
         [HttpGet("getAllUsersByRole/{roleId}")]
         public async Task<IActionResult> GetAllUsersByRole(int roleId)
         {
-            var users = await _context.Users
+            var users = await _context.User
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
@@ -845,7 +845,7 @@ namespace Call2Owner.Controllers
         public async Task<IActionResult> GetAllParentRoleUsers(int roleId)
         {
             // Step 1: Get the ParentRoleId of the given role
-            var parentRoleId = await _context.Roles
+            var parentRoleId = await _context.Role
                 .Where(r => r.Id == roleId)
                 .Select(r => r.ParentRoleId)
                 .FirstOrDefaultAsync();
@@ -856,7 +856,7 @@ namespace Call2Owner.Controllers
             }
 
             // Step 2: Get users with the parent role ID
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(u => u.RoleId == parentRoleId)
                 .Select(u => new UsersDtoOutput
                 {
@@ -917,61 +917,64 @@ namespace Call2Owner.Controllers
 
         public static async Task SeedSuperAdminAsync(DataContext context)
         {
-            var roleHierarchy = new List<(int Id, string RoleName, int? ParentRoleId)>
-                                {
-                                    (301, "SuperAdmin", null),
-                                    (302, "Admin", 301),
-                                    (303, "SocietyAdmin", 302),
-                                    (304, "Resident", 303),
-                                    (305, "Guest", 304)
-                                };
+            //var roleHierarchy = new List<(int Id, string RoleName, int? ParentRoleId)>
+            //                    {
+            //                        (301, "SuperAdmin", null),
+            //                        (302, "Admin", 301),
+            //                        (303, "SocietyAdmin", 302),
+            //                        (304, "Resident", 303),
+            //                        (305, "Guest", 304)
+            //                    };
 
-            var existingRoles = await context.Roles.ToDictionaryAsync(r => r.RoleName, r => r);
+            //var existingRoles = await context.Role.ToDictionaryAsync(r => r.RoleName, r => r);
 
-            // Begin transaction to ensure consistency
+            //// Begin transaction to ensure consistency
             using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
 
-                foreach (var (id, roleName, parentRoleId) in roleHierarchy)
-                {
-                    if (!existingRoles.ContainsKey(roleName))
-                    {
-                        var trackedEntity = context.ChangeTracker.Entries<Role>()
-                                                   .FirstOrDefault(e => e.Entity.Id == id);
+                //    foreach (var (id, roleName, parentRoleId) in roleHierarchy)
+                //    {
+                //        if (!existingRoles.ContainsKey(roleName))
+                //        {
+                //            var trackedEntity = context.ChangeTracker.Entries<Role>()
+                //                                       .FirstOrDefault(e => e.Entity.Id == id);
 
-                        if (trackedEntity != null)
-                        {
-                            trackedEntity.State = EntityState.Detached;
-                        }
+                //            if (trackedEntity != null)
+                //            {
+                //                trackedEntity.State = EntityState.Detached;
+                //            }
 
-                        var role = new Role
-                        {
-                            Id = id,
-                            RoleName = roleName,
-                            ParentRoleId = parentRoleId
-                        };
+                //            var role = new Role
+                //            {
+                //                Id = id,
+                //                RoleName = roleName,
+                //                ParentRoleId = parentRoleId
+                //            };
 
-                        await context.Roles.AddAsync(role);
+                //            await context.Role.AddAsync(role);
 
-                        existingRoles[roleName] = role;
-                    }
-                }
+                //            existingRoles[roleName] = role;
+                //        }
+                //    }
 
-                await context.SaveChangesAsync();
+                //    await context.SaveChangesAsync();
 
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
 
 
-                await context.SaveChangesAsync();
+                //    await context.SaveChangesAsync();
 
-                await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+
+                var existingRoles = await context.Role.ToListAsync();
 
                 // Seed SuperAdmin user
-                var superAdminRole = existingRoles["SuperAdmin"];
-                if (superAdminRole != null && !await context.Users.AnyAsync(u => u.Email == "superadmin@gmail.com"))
+                var superAdminRole = existingRoles.FirstOrDefault(x => x.RoleName == "SuperAdmin");
+
+                if (superAdminRole != null && !await context.User.AnyAsync(u => u.Email == "superadmin@gmail.com"))
                 {
                     Guid username = Guid.NewGuid();
 
@@ -990,7 +993,7 @@ namespace Call2Owner.Controllers
                         CreatedOn = DateTime.UtcNow
                     };
 
-                    await context.Users.AddAsync(superAdmin);
+                    await context.User.AddAsync(superAdmin);
                     await context.SaveChangesAsync();
                 }
 
@@ -1065,7 +1068,7 @@ namespace Call2Owner.Controllers
         //        return Unauthorized(new { message = "Invalid token or user not found." });
         //    int userId = int.Parse(userIdClaim.Value);
 
-        //    var users = await _context.Users.ToListAsync();
+        //    var users = await _context.User.ToListAsync();
         //    var tree = BuildUserTree(users, userId);
         //    return Ok(tree);
         //}
@@ -1081,7 +1084,7 @@ namespace Call2Owner.Controllers
 
         //    int userId = int.Parse(userIdClaim.Value);
 
-        //    var users = await _context.Users.ToListAsync();
+        //    var users = await _context.User.ToListAsync();
 
         //    // Build full tree from root
         //    var fullTree = BuildUserTree(users, null);
@@ -1106,7 +1109,7 @@ namespace Call2Owner.Controllers
                 .Select(x => x.UserId)
                 .ToListAsync();
 
-            var users = await _context.Users
+            var users = await _context.User
                 .Where(x => usersUnderInsurer.Contains(x.Id))
                .Select(u => new UsersDtoOutput
                {
@@ -1203,7 +1206,7 @@ namespace Call2Owner.Controllers
 
         private async Task<List<int>> GetAllChildRoleIdsAsync(int parentId)
         {
-            var childRoles = await _context.Roles
+            var childRoles = await _context.Role
                 .Where(r => r.ParentRoleId == parentId)
                 .ToListAsync();
 
@@ -1220,18 +1223,18 @@ namespace Call2Owner.Controllers
 
         private async Task<List<Role>> GetChildRolesAsync(string roleName)
         {
-            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Id.ToString() == roleName);
+            var userRole = await _context.Role.FirstOrDefaultAsync(r => r.Id.ToString() == roleName);
             if (userRole == null) return new List<Role>();
 
             var childRoleIds = await GetAllChildRoleIdsAsync(userRole.Id);
-            return await _context.Roles.Where(r => childRoleIds.Contains(r.Id)).ToListAsync();
+            return await _context.Role.Where(r => childRoleIds.Contains(r.Id)).ToListAsync();
         }
 
 
         // Recursive function to get all child role IDs
         private async Task<List<int>> GetAllChildRoleIds(int parentId)
         {
-            var childRoles = await _context.Roles
+            var childRoles = await _context.Role
                 .Where(r => r.ParentRoleId == parentId)
                 .ToListAsync();
 
