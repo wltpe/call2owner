@@ -177,7 +177,7 @@ namespace Call2Owner.Controllers
                 return NotFound();
 
             society.IsApproved = model.IsApproved;
-            society.ApprovedBy = model.ApprovedBy;
+         //   society.ApprovedBy = model.ApprovedBy;
             society.ApprovedComment = model.ApprovedComment;
             society.ApprovedOn = DateTime.UtcNow;
 

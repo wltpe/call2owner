@@ -225,9 +225,11 @@ namespace Call2Owner.Controllers
         }
         
         [HttpPost("resident/approve")]
-        public async Task<IActionResult> ResidentApprove(Guid id, [FromBody] ResidentApprovalDto model)
+        public async Task<IActionResult> ResidentApprove(Guid ResidentId, [FromBody] ResidentApprovalDto model)
         {
-            var resident = await _context.Resident.FindAsync(id);
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var resident = await _context.Resident.FindAsync(ResidentId);
             if (resident == null || resident.IsDeleted == true)
                 return NotFound();
 
@@ -235,7 +237,7 @@ namespace Call2Owner.Controllers
                 return NotFound("Already Approved");
 
             resident.IsApproved = model.IsApproved;
-            resident.ApprovedBy = model.ApprovedBy;
+            resident.ApprovedBy = currentUserId;
             resident.ApprovedComment = model.ApprovedComment;
             resident.ApprovedOn = DateTime.UtcNow;
 
@@ -244,9 +246,12 @@ namespace Call2Owner.Controllers
         }
 
         [HttpPost("society/approve")]
-        public async Task<IActionResult> SocietyApprove(Guid id, [FromBody] SocietyApprovalDto model)
+        public async Task<IActionResult> SocietyApprove(Guid SocietyId, [FromBody] SocietyApprovalDto model)
         {
-            var society = await _context.Society.FindAsync(id);
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+            var society = await _context.Society.FindAsync(SocietyId);
             if (society == null || society.IsDeleted == true)
                 return NotFound();
 
@@ -254,7 +259,7 @@ namespace Call2Owner.Controllers
                 return NotFound("Already Approved");
 
             society.IsApproved = model.IsApproved;
-            society.ApprovedBy = model.ApprovedBy;
+            society.ApprovedBy = currentUserId;
             society.ApprovedComment = model.ApprovedComment;
             society.ApprovedOn = DateTime.UtcNow;
 

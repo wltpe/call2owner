@@ -51,7 +51,6 @@
     public class ResidentApprovalDto
     {
         public bool IsApproved { get; set; }
-        public string ApprovedBy { get; set; }
         public string ApprovedComment { get; set; }
     }
 }
