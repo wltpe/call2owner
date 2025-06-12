@@ -9,7 +9,7 @@ public partial class Resident
 
     public Guid UserId { get; set; }
 
-    public Guid SocietyFlatId { get; set; }
+    public Guid? SocietyFlatId { get; set; }
 
     public int? EntityTypeDetailId { get; set; }
 
@@ -17,11 +17,11 @@ public partial class Resident
 
     public bool IsApproved { get; set; }
 
-    public string ApprovedBy { get; set; } = null!;
+    public string? ApprovedBy { get; set; }
 
     public DateTime? ApprovedOn { get; set; }
 
-    public string ApprovedComment { get; set; } = null!;
+    public string? ApprovedComment { get; set; } 
 
     public bool IsActive { get; set; }
 

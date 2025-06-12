@@ -296,7 +296,7 @@ namespace Call2Owner.Controllers
         public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSocietyByCityId(int CityId)
         {
             var societies = await _context.Society
-                .Where(s => s.IsDeleted != true && s.IsActive == true && s.CityId == CityId)
+                .Where(s => s.IsDeleted != true && s.IsActive == true && s.CityId == CityId && s.IsApproved == true)
                 .OrderBy(s => s.Name)
                 .ToListAsync();
 
@@ -357,28 +357,61 @@ namespace Call2Owner.Controllers
             return Ok(result);
         }
 
-        [HttpGet("resident-update-form-fields")]
+        [HttpGet("resident-type-form-fields")]
+        public async Task<IActionResult> GetResidentTypeFormFields(int EntityTypeDetailId)
+        {
+            var jsonString = await _context.EntityTypeDetail
+       .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == EntityTypeDetailId)
+       .Select(d => d.DetailJson)
+       .FirstOrDefaultAsync();
+
+            if (string.IsNullOrEmpty(jsonString))
+                return NotFound();
+
+            try
+            {
+                // Deserialize JSON to List<FormField>
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                };
+
+                //   var formFields = System.Text.Json.JsonSerializer.Deserialize<List<FormField>>(jsonString, options);
+                List<ResidentDocument> documents = System.Text.Json.JsonSerializer.Deserialize<List<ResidentDocument>>(jsonString);
+
+
+                return Ok(documents);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest("Invalid JSON format.");
+            }
+        }
+
+
+    //    [AllowAnonymous]
+        [HttpPost("resident-update-form-fields")]
         public async Task<IActionResult> GetResidentTypeFormFields(ResidentUpdateFormFields obj)
         {
             var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            int ResidentTypeId = 3;
-            var targetType = "pdf";
+            string extensionWithoutDot = null;
+            int ResidentType_EntityTypeId = 3;
+            if (obj.File != null)
+            {
+
+                 extensionWithoutDot = Path.GetExtension(obj.File.FileName)?.TrimStart('.');
+            }
+
+            var targetType = extensionWithoutDot;
 
             var getAllEntityTypeDetailByEntityTypeId = await _context.EntityTypeDetail
-       .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == ResidentTypeId)
+       .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == ResidentType_EntityTypeId && d.Id == obj.EntityTypeDetailId)
        .FirstOrDefaultAsync();
 
             if (getAllEntityTypeDetailByEntityTypeId !=null)
             {
-                if (getAllEntityTypeDetailByEntityTypeId.EntityTypeId == obj.EntityTypeId && getAllEntityTypeDetailByEntityTypeId.Id == obj.EntityTypeDetailId)
-                {
                     // nothing to do
-                }
-                else
-                {
-                    return NotFound();
-                }
             }
             else
             {
@@ -400,7 +433,7 @@ namespace Call2Owner.Controllers
                 };
 
                 List<ResidentDocument>? documents = System.Text.Json.JsonSerializer.Deserialize<List<ResidentDocument>>(jsonString.DetailJson, options);
-               
+                bool IsFileUploadRequired = false;
 
                 if (documents != null)
                 {
@@ -415,15 +448,29 @@ namespace Call2Owner.Controllers
                     if (IsType.Count > 0)
                     {
                         
+                        //var matchingDocuments = documents
+                        //    .Where(doc => doc.Details != null && doc.Details.Any(detail =>
+                        //        detail.Type.Any(t => string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase))
+                        //    ))
+                        //    .ToList();
+
                         var matchingDocuments = documents
-                            .Where(doc => doc.Details != null && doc.Details.Any(detail =>
-                                detail.Type.Any(t => string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase))
-                            ))
-                            .ToList();
+    .Where(doc => doc.Details != null && doc.Details.Any(detail =>
+        detail.Type != null && detail.Type.Any(t =>
+            string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase)
+        )
+    ))
+    .ToList();
+
+                        if (IsType.Count > 0 && matchingDocuments.Count == 0)
+                        {
+                            return NotFound();
+                        }
 
                         if (matchingDocuments.Count > 0 )
                         {
                             //noting to do
+                            IsFileUploadRequired = true;
                         }
                         else
                         {
@@ -434,6 +481,7 @@ namespace Call2Owner.Controllers
                     else
                     {
                         // nothing to do
+
                     }
 
 
@@ -444,27 +492,40 @@ namespace Call2Owner.Controllers
                 }
 
                 var blobName = "";
-
-                // Upload file
-                if (obj.File is not null)
+                if (IsFileUploadRequired == true)
                 {
-                    blobName = await UploadFileOrImageFolderAsync(obj.File.FileName, obj.File.OpenReadStream());
+
+                    // Upload file
+                    if (obj.File is not null)
+                    {
+                        blobName = await UploadFileOrImageFolderAsync(obj.File.FileName, obj.File.OpenReadStream());
+                    }
+                    else
+                    {
+                        blobName = null;
+                    }
                 }
                 else
                 {
                     blobName = null;
                 }
-                Guid Id = Guid.NewGuid();
+                    Guid Id = Guid.NewGuid();
 
                 Guid residentDocumentId = documents
                                             .Where(doc => doc.ResidentDocumentRequiredToRegisterId != null)
                                             .Select(doc => doc.ResidentDocumentRequiredToRegisterId)
                                             .FirstOrDefault();
 
+                Guid parsedResidentId;
+                if (!Guid.TryParse(currentUserId, out parsedResidentId))
+                {
+                    parsedResidentId = Guid.NewGuid(); // fallback
+                }
+
                 var residentDocumentUploaded = new ResidentDocumentUploaded()
                 {
                     Id = Id,
-                    ResidentId = Guid.Parse(currentUserId),
+                    ResidentId = parsedResidentId,
                     ResidentDocumentRequiredToRegisterId = residentDocumentId,
                     Name = obj.Name,
                     Url = blobName,
@@ -474,13 +535,15 @@ namespace Call2Owner.Controllers
                     IsDeleted = false
                 };
 
-                var userDetal = await AddResidentDocumentUploadedAsync(residentDocumentUploaded);
+                var userDetal = await AddResidentDocumentUploadedAsync(obj.EntityTypeDetailId, obj.SocietyFlatId, residentDocumentUploaded);
+
                 if (userDetal == null)
                 {
                     return Ok("Invalid or expired token");
                 }
                 else
                 {
+
                     return Ok(userDetal);
                 }
 
@@ -555,26 +618,27 @@ namespace Call2Owner.Controllers
 
         private async Task<string> UploadFileOrImageFolderAsync(string blobName, Stream imageStream)
         {
-            // Ensure blobName is sanitized to prevent path traversal attacks
-            if (string.IsNullOrWhiteSpace(blobName))
-            {
-                throw new ArgumentException("Invalid blob name", nameof(blobName));
-            }
-
-            // Define the IIS folder path
-            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wltpe_images", "images", "profile-images");
-
-            // Ensure the folder exists
-            if (!Directory.Exists(folderPath))
-            {
-                Directory.CreateDirectory(folderPath);
-            }
-
-            // Combine the folder path and file name to create the full file path
-            string filePath = Path.Combine(folderPath, blobName);
-
             try
             {
+                // Ensure blobName is sanitized to prevent path traversal attacks
+                if (string.IsNullOrWhiteSpace(blobName))
+                {
+                    throw new ArgumentException("Invalid blob name", nameof(blobName));
+                }
+
+                // Define the IIS folder path
+                string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Images", "Resident", "Documents");
+
+                // Ensure the folder exists
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                // Combine the folder path and file name to create the full file path
+                string filePath = Path.Combine(folderPath, blobName);
+
+
                 // Save the file stream to the IIS folder
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                 {
@@ -582,7 +646,10 @@ namespace Call2Owner.Controllers
                 }
 
                 // Generate the URL to access the uploaded file
-                string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+
+                //Local Path
+                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Documents/{blobName}";
 
 
                 return fileUrl; // Return the accessible file URL
@@ -593,7 +660,7 @@ namespace Call2Owner.Controllers
                 throw new InvalidOperationException("An error occurred while uploading the file/image.", ex);
             }
         }
-        public async Task<ResidentDocumentUploaded?> AddResidentDocumentUploadedAsync(ResidentDocumentUploaded obj)
+        private async Task<ResidentDocumentUploaded?> AddResidentDocumentUploadedAsync(int EntityTypeDetailId, Guid SocietyFlatId, ResidentDocumentUploaded obj)
         {
             // Check if a record already exists
             var userExists = await _context.ResidentDocumentUploaded.FirstOrDefaultAsync(x =>
@@ -604,8 +671,29 @@ namespace Call2Owner.Controllers
 
             if (userExists == null)
             {
-                // Directly add the obj to the context
-                await _context.ResidentDocumentUploaded.AddAsync(obj);
+               
+
+                var updateResident = await _context.Resident.FirstOrDefaultAsync(x => 
+                x.UserId == obj.ResidentId && x.IsApproved == false && x.IsDocumentUploaded == false);
+
+               
+
+                if (updateResident !=null)
+                {
+                    obj.ResidentId = updateResident.Id;
+
+                    // Directly add the obj to the context
+                    await _context.ResidentDocumentUploaded.AddAsync(obj);
+                    
+                    updateResident.IsDocumentUploaded = true;
+                    updateResident.EntityTypeDetailId = EntityTypeDetailId;
+                    updateResident.SocietyFlatId = SocietyFlatId;
+                    updateResident.UpdatedBy = obj.CreatedBy;
+                    updateResident.UpdatedOn = DateTime.UtcNow;
+
+                     _context.Resident.Update(updateResident);
+
+                }
 
                 // Save changes to the database
                 await _context.SaveChangesAsync();
@@ -615,11 +703,9 @@ namespace Call2Owner.Controllers
             else
             {
                 // Return null if the record exists
-                return null;
+                return userExists;
             }
         }
-
-
 
     }
 
@@ -663,6 +749,7 @@ namespace Call2Owner.Controllers
     public class ResidentUpdateFormFields {
         public int EntityTypeId { get; set; }
         public int EntityTypeDetailId { get; set; }
+        public Guid SocietyFlatId { get; set; }
         public string Name { get; set; }
         public string? FileOrImage { get; set; }
         // public string? Address { get; set; }

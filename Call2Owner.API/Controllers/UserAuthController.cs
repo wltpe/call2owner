@@ -111,7 +111,20 @@ namespace Call2Owner.Controllers
                     CreatedOn=DateTime.UtcNow
                 };
 
+                // Add User as Resident
+                var AddResident = new Resident
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = newUser.Id,
+                    IsDocumentUploaded = false,
+                    IsApproved = false,
+                    IsActive = true,
+                    CreatedBy = Username.ToString(),
+                    CreatedOn = DateTime.UtcNow
+                };
+
                 await _context.User.AddAsync(newUser);
+                await _context.Resident.AddAsync(AddResident);
             }
 
             await _context.SaveChangesAsync();
@@ -192,6 +205,7 @@ namespace Call2Owner.Controllers
             // ✅ Clear OTP after successful login (optional but recommended)
             user.Otp = null;
             user.OtpValidatedOn = DateTime.UtcNow;
+            
             await _context.SaveChangesAsync();
 
             // ✅ Get RoleClaims
@@ -208,6 +222,44 @@ namespace Call2Owner.Controllers
             object insurerData = null; // Placeholder for future logic
 
             return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
+        }
+        
+        [HttpPost("resident/approve")]
+        public async Task<IActionResult> ResidentApprove(Guid id, [FromBody] ResidentApprovalDto model)
+        {
+            var resident = await _context.Resident.FindAsync(id);
+            if (resident == null || resident.IsDeleted == true)
+                return NotFound();
+
+            if (resident.IsApproved == true)
+                return NotFound("Already Approved");
+
+            resident.IsApproved = model.IsApproved;
+            resident.ApprovedBy = model.ApprovedBy;
+            resident.ApprovedComment = model.ApprovedComment;
+            resident.ApprovedOn = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(_mapper.Map<ResidentDto>(resident));
+        }
+
+        [HttpPost("society/approve")]
+        public async Task<IActionResult> SocietyApprove(Guid id, [FromBody] SocietyApprovalDto model)
+        {
+            var society = await _context.Society.FindAsync(id);
+            if (society == null || society.IsDeleted == true)
+                return NotFound();
+
+            if (society.IsApproved == true)
+                return NotFound("Already Approved");
+
+            society.IsApproved = model.IsApproved;
+            society.ApprovedBy = model.ApprovedBy;
+            society.ApprovedComment = model.ApprovedComment;
+            society.ApprovedOn = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(_mapper.Map<SocietyDto>(society));
         }
 
         private string GenerateJwtToken(User user, string modulePermissions)

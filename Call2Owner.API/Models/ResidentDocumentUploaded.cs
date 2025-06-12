@@ -13,7 +13,7 @@ public partial class ResidentDocumentUploaded
 
     public string Name { get; set; } = null!;
 
-    public string Url { get; set; } = null!;
+    public string? Url { get; set; }
 
     public bool IsActive { get; set; }
 

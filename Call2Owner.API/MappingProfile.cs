@@ -47,6 +47,9 @@ namespace Call2Owner
             CreateMap<Country, CountryDto>().ReverseMap();
             CreateMap<State, StateDto>().ReverseMap();
             CreateMap<City, CityDto>().ReverseMap();
+
+            CreateMap<Resident, ResidentApprovalDto>().ReverseMap();
+            CreateMap<Resident, ResidentDto>().ReverseMap();
         }
     }
 }
