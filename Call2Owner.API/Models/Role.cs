@@ -17,7 +17,7 @@ public partial class Role
 
     public virtual Role? ParentRole { get; set; }
 
-    public virtual ICollection<RoleClaim> RoleClaims { get; set; } = new List<RoleClaim>();
+    public virtual ICollection<RoleClaim> RoleClaim { get; set; } = new List<RoleClaim>();
 
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<User> User { get; set; } = new List<User>();
 }

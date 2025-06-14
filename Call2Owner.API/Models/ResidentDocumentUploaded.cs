@@ -11,9 +11,10 @@ public partial class ResidentDocumentUploaded
 
     public int EntityTypeDetailId { get; set; }
 
-    public string? Name { get; set; } = null!;
+    public string? Name { get; set; }
 
     public string? Value { get; set; }
+
     public string? DetailJson { get; set; }
 
     public bool IsActive { get; set; }
@@ -32,8 +33,7 @@ public partial class ResidentDocumentUploaded
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual Resident Resident { get; set; } = null!;
-
     public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
 
+    public virtual Resident Resident { get; set; } = null!;
 }

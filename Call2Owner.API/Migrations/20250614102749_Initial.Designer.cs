@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Call2Owner.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250613121010_SocietyUser_And_Remove_Entities_DocReqToReg")]
-    partial class SocietyUser_And_Remove_Entities_DocReqToReg
+    [Migration("20250614102749_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -70,7 +70,7 @@ namespace Call2Owner.API.Migrations
                     b.HasKey("Id")
                         .HasName("PK__CabCompa__3214EC07CF373046");
 
-                    b.ToTable("CabCompany", (string)null);
+                    b.ToTable("CabCompany");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.City", b =>
@@ -127,9 +127,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StateId");
+                    b.HasIndex(new[] { "StateId" }, "IX_City_StateId");
 
-                    b.ToTable("City", (string)null);
+                    b.ToTable("City");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Country", b =>
@@ -183,7 +183,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Country", (string)null);
+                    b.ToTable("Country");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.DeliveryCompany", b =>
@@ -231,7 +231,7 @@ namespace Call2Owner.API.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Delivery__3214EC07796F7DC6");
 
-                    b.ToTable("DeliveryCompany", (string)null);
+                    b.ToTable("DeliveryCompany");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.EntityType", b =>
@@ -281,7 +281,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EntityType", (string)null);
+                    b.ToTable("EntityType");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.EntityTypeDetail", b =>
@@ -336,7 +336,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EntityTypeId");
+                    b.HasIndex(new[] { "EntityTypeId" }, "IX_EntityTypeDetail_EntityTypeId");
 
                     b.ToTable("EntityTypeDetail");
                 });
@@ -458,13 +458,13 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EntityTypeDetailId");
+                    b.HasIndex(new[] { "EntityTypeDetailId" }, "IX_Resident_EntityTypeDetailId");
 
-                    b.HasIndex("SocietyFlatId");
+                    b.HasIndex(new[] { "SocietyFlatId" }, "IX_Resident_SocietyFlatId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex(new[] { "UserId" }, "IX_Resident_UserId");
 
-                    b.ToTable("Resident", (string)null);
+                    b.ToTable("Resident");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.ResidentDocumentUploaded", b =>
@@ -586,9 +586,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ResidentId");
+                    b.HasIndex(new[] { "ResidentId" }, "IX_ResidentFamily_ResidentId");
 
-                    b.ToTable("ResidentFamily", (string)null);
+                    b.ToTable("ResidentFamily");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.ResidentFrequentlyEntry", b =>
@@ -692,15 +692,15 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CabCompanyId");
+                    b.HasIndex(new[] { "CabCompanyId" }, "IX_ResidentFrequentlyEntry_CabCompanyId");
 
-                    b.HasIndex("DeliveryCompanyId");
+                    b.HasIndex(new[] { "DeliveryCompanyId" }, "IX_ResidentFrequentlyEntry_DeliveryCompanyId");
 
-                    b.HasIndex("ResidentId");
+                    b.HasIndex(new[] { "ResidentId" }, "IX_ResidentFrequentlyEntry_ResidentId");
 
-                    b.HasIndex("VisitingHelpCategoryCompanyId");
+                    b.HasIndex(new[] { "VisitingHelpCategoryCompanyId" }, "IX_ResidentFrequentlyEntry_VisitingHelpCategoryCompanyId");
 
-                    b.ToTable("ResidentFrequentlyEntry", (string)null);
+                    b.ToTable("ResidentFrequentlyEntry");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.ResidentFrequentlyGuest", b =>
@@ -782,7 +782,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ResidentId");
+                    b.HasIndex(new[] { "ResidentId" }, "IX_ResidentFrequentlyGuest_ResidentId");
 
                     b.ToTable("ResidentFrequentlyGuest");
                 });
@@ -864,9 +864,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ResidentId");
+                    b.HasIndex(new[] { "ResidentId" }, "IX_ResidentPet_ResidentId");
 
-                    b.ToTable("ResidentPet", (string)null);
+                    b.ToTable("ResidentPet");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.ResidentVehicle", b =>
@@ -938,9 +938,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ResidentId");
+                    b.HasIndex(new[] { "ResidentId" }, "IX_ResidentVehicle_ResidentId");
 
-                    b.ToTable("ResidentVehicle", (string)null);
+                    b.ToTable("ResidentVehicle");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Role", b =>
@@ -1080,13 +1080,13 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CityId");
+                    b.HasIndex(new[] { "CityId" }, "IX_Society_CityId");
 
-                    b.HasIndex("CountryId");
+                    b.HasIndex(new[] { "CountryId" }, "IX_Society_CountryId");
 
-                    b.HasIndex("StateId");
+                    b.HasIndex(new[] { "StateId" }, "IX_Society_StateId");
 
-                    b.ToTable("Society", (string)null);
+                    b.ToTable("Society");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyBuilding", b =>
@@ -1140,30 +1140,29 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SocietyId");
+                    b.HasIndex(new[] { "SocietyId" }, "IX_SocietyBuilding_SocietyId");
 
-                    b.ToTable("SocietyBuilding", (string)null);
+                    b.ToTable("SocietyBuilding");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyDocumentUploaded", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("CreatedOn")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DeletedBy")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedOn")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DetailJson")
                         .HasColumnType("nvarchar(max)");
@@ -1184,11 +1183,10 @@ namespace Call2Owner.API.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("UpdatedBy")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Value")
                         .HasColumnType("nvarchar(max)");
@@ -1199,7 +1197,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasIndex("SocietyId");
 
-                    b.ToTable("SocietyDocumentUploaded", (string)null);
+                    b.ToTable("SocietyDocumentUploaded");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyFlat", b =>
@@ -1256,11 +1254,11 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SocietyBuildingId");
+                    b.HasIndex(new[] { "SocietyBuildingId" }, "IX_SocietyFlat_SocietyBuildingId");
 
-                    b.HasIndex("SocietyId");
+                    b.HasIndex(new[] { "SocietyId" }, "IX_SocietyFlat_SocietyId");
 
-                    b.ToTable("SocietyFlat", (string)null);
+                    b.ToTable("SocietyFlat");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyUser", b =>
@@ -1438,9 +1436,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CountryId");
+                    b.HasIndex(new[] { "CountryId" }, "IX_State_CountryId");
 
-                    b.ToTable("State", (string)null);
+                    b.ToTable("State");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.User", b =>
@@ -1536,7 +1534,7 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex(new[] { "RoleId" }, "IX_User_RoleId");
 
                     b.ToTable("User");
                 });
@@ -1585,9 +1583,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex(new[] { "UserId" }, "IX_UserParent_UserId");
 
-                    b.ToTable("UserParent", (string)null);
+                    b.ToTable("UserParent");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.UserProfile", b =>
@@ -1630,9 +1628,9 @@ namespace Call2Owner.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex(new[] { "UserId" }, "IX_UserProfile_UserId");
 
-                    b.ToTable("UserProfile", (string)null);
+                    b.ToTable("UserProfile");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.VisitingHelpCategory", b =>
@@ -1676,7 +1674,7 @@ namespace Call2Owner.API.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Visiting__3214EC078E004FA9");
 
-                    b.ToTable("VisitingHelpCategory", (string)null);
+                    b.ToTable("VisitingHelpCategory");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.VisitingHelpCategoryCompany", b =>
@@ -1723,15 +1721,15 @@ namespace Call2Owner.API.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Visiting__3214EC07CE8F7A25");
 
-                    b.HasIndex("VisitingHelpCategoryId");
+                    b.HasIndex(new[] { "VisitingHelpCategoryId" }, "IX_VisitingHelpCategoryCompany_VisitingHelpCategoryId");
 
-                    b.ToTable("VisitingHelpCategoryCompany", (string)null);
+                    b.ToTable("VisitingHelpCategoryCompany");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.City", b =>
                 {
                     b.HasOne("Call2Owner.Models.State", "State")
-                        .WithMany("Cities")
+                        .WithMany("City")
                         .HasForeignKey("StateId")
                         .IsRequired()
                         .HasConstraintName("FK_City_State");
@@ -1742,7 +1740,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.EntityTypeDetail", b =>
                 {
                     b.HasOne("Call2Owner.Models.EntityType", "EntityType")
-                        .WithMany("EntityTypeDetails")
+                        .WithMany("EntityTypeDetail")
                         .HasForeignKey("EntityTypeId")
                         .IsRequired()
                         .HasConstraintName("FK_EntityTypeDetails_EntityType");
@@ -1753,7 +1751,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ModulePermission", b =>
                 {
                     b.HasOne("Call2Owner.Models.Module", "Module")
-                        .WithMany("ModulePermissions")
+                        .WithMany("ModulePermission")
                         .HasForeignKey("ModuleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1764,17 +1762,17 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.Resident", b =>
                 {
                     b.HasOne("Call2Owner.Models.EntityTypeDetail", "EntityTypeDetail")
-                        .WithMany("Residents")
+                        .WithMany("Resident")
                         .HasForeignKey("EntityTypeDetailId")
                         .HasConstraintName("FK_Resident_EntityTypeDetails");
 
                     b.HasOne("Call2Owner.Models.SocietyFlat", "SocietyFlat")
-                        .WithMany("Residents")
+                        .WithMany("Resident")
                         .HasForeignKey("SocietyFlatId")
                         .HasConstraintName("FK_Resident_SocietyFlat");
 
                     b.HasOne("Call2Owner.Models.User", "User")
-                        .WithMany("Residents")
+                        .WithMany("Resident")
                         .HasForeignKey("UserId")
                         .IsRequired()
                         .HasConstraintName("FK_Resident_Users");
@@ -1789,13 +1787,13 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentDocumentUploaded", b =>
                 {
                     b.HasOne("Call2Owner.Models.EntityTypeDetail", "EntityTypeDetail")
-                        .WithMany("ResidentDocumentUploadeds")
+                        .WithMany()
                         .HasForeignKey("EntityTypeDetailId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentDocumentUploadeds")
+                        .WithMany()
                         .HasForeignKey("ResidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1808,7 +1806,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentFamily", b =>
                 {
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentFamilies")
+                        .WithMany("ResidentFamily")
                         .HasForeignKey("ResidentId")
                         .IsRequired()
                         .HasConstraintName("FK_ResidentFamily_Resident");
@@ -1819,23 +1817,23 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentFrequentlyEntry", b =>
                 {
                     b.HasOne("Call2Owner.Models.CabCompany", "CabCompany")
-                        .WithMany("ResidentFrequentlyEntries")
+                        .WithMany("ResidentFrequentlyEntry")
                         .HasForeignKey("CabCompanyId")
                         .HasConstraintName("FK_ResidentFrequentlyEntry_CabCompany");
 
                     b.HasOne("Call2Owner.Models.DeliveryCompany", "DeliveryCompany")
-                        .WithMany("ResidentFrequentlyEntries")
+                        .WithMany("ResidentFrequentlyEntry")
                         .HasForeignKey("DeliveryCompanyId")
                         .HasConstraintName("FK_ResidentFrequentlyEntry_DeliveryCompany");
 
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentFrequentlyEntries")
+                        .WithMany("ResidentFrequentlyEntry")
                         .HasForeignKey("ResidentId")
                         .IsRequired()
                         .HasConstraintName("FK_ResidentFrequentlyEntry_Resident");
 
                     b.HasOne("Call2Owner.Models.VisitingHelpCategoryCompany", "VisitingHelpCategoryCompany")
-                        .WithMany("ResidentFrequentlyEntries")
+                        .WithMany("ResidentFrequentlyEntry")
                         .HasForeignKey("VisitingHelpCategoryCompanyId")
                         .HasConstraintName("FK_ResidentFrequentlyEntry_VisitingHelpCategoryCompany");
 
@@ -1851,7 +1849,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentFrequentlyGuest", b =>
                 {
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentFrequentlyGuests")
+                        .WithMany("ResidentFrequentlyGuest")
                         .HasForeignKey("ResidentId")
                         .IsRequired()
                         .HasConstraintName("FK_ResidentFrequentlyGuests_Resident");
@@ -1862,7 +1860,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentPet", b =>
                 {
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentPets")
+                        .WithMany("ResidentPet")
                         .HasForeignKey("ResidentId")
                         .IsRequired()
                         .HasConstraintName("FK_ResidentPet_Resident");
@@ -1873,7 +1871,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.ResidentVehicle", b =>
                 {
                     b.HasOne("Call2Owner.Models.Resident", "Resident")
-                        .WithMany("ResidentVehicles")
+                        .WithMany("ResidentVehicle")
                         .HasForeignKey("ResidentId")
                         .IsRequired()
                         .HasConstraintName("FK_ResidentVehicle_Resident");
@@ -1893,7 +1891,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.RoleClaim", b =>
                 {
                     b.HasOne("Call2Owner.Models.Role", "Role")
-                        .WithMany("RoleClaims")
+                        .WithMany("RoleClaim")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1904,19 +1902,19 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.Society", b =>
                 {
                     b.HasOne("Call2Owner.Models.City", "City")
-                        .WithMany("Societies")
+                        .WithMany("Society")
                         .HasForeignKey("CityId")
                         .IsRequired()
                         .HasConstraintName("FK_Society_City");
 
                     b.HasOne("Call2Owner.Models.Country", "Country")
-                        .WithMany("Societies")
+                        .WithMany("Society")
                         .HasForeignKey("CountryId")
                         .IsRequired()
                         .HasConstraintName("FK_Society_Country");
 
                     b.HasOne("Call2Owner.Models.State", "State")
-                        .WithMany("Societies")
+                        .WithMany("Society")
                         .HasForeignKey("StateId")
                         .IsRequired()
                         .HasConstraintName("FK_Society_State");
@@ -1931,7 +1929,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.SocietyBuilding", b =>
                 {
                     b.HasOne("Call2Owner.Models.Society", "Society")
-                        .WithMany("SocietyBuildings")
+                        .WithMany("SocietyBuilding")
                         .HasForeignKey("SocietyId")
                         .IsRequired()
                         .HasConstraintName("FK_SocietyBuilding_Society");
@@ -1942,16 +1940,16 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.SocietyDocumentUploaded", b =>
                 {
                     b.HasOne("Call2Owner.Models.EntityTypeDetail", "EntityTypeDetail")
-                        .WithMany("SocietyDocumentUploadeds")
+                        .WithMany()
                         .HasForeignKey("EntityTypeDetailId")
-                        .IsRequired()
-                        .HasConstraintName("FK_SocietyDocumentUploaded_RequiredDoc");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Call2Owner.Models.Society", "Society")
-                        .WithMany("SocietyDocumentUploadeds")
+                        .WithMany()
                         .HasForeignKey("SocietyId")
-                        .IsRequired()
-                        .HasConstraintName("FK_SocietyDocumentUploaded_Society");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("EntityTypeDetail");
 
@@ -1961,13 +1959,13 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.SocietyFlat", b =>
                 {
                     b.HasOne("Call2Owner.Models.SocietyBuilding", "SocietyBuilding")
-                        .WithMany("SocietyFlats")
+                        .WithMany("SocietyFlat")
                         .HasForeignKey("SocietyBuildingId")
                         .IsRequired()
                         .HasConstraintName("FK_SocietyFlat_SocietyBuilding");
 
                     b.HasOne("Call2Owner.Models.Society", "Society")
-                        .WithMany("SocietyFlats")
+                        .WithMany("SocietyFlat")
                         .HasForeignKey("SocietyId")
                         .IsRequired()
                         .HasConstraintName("FK_SocietyFlat_Society");
@@ -2003,7 +2001,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.SocietyUserDocumentUploaded", b =>
                 {
                     b.HasOne("Call2Owner.Models.EntityTypeDetail", "EntityTypeDetail")
-                        .WithMany("SocietyUserDocumentUploadeds")
+                        .WithMany()
                         .HasForeignKey("EntityTypeDetailId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2022,7 +2020,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.State", b =>
                 {
                     b.HasOne("Call2Owner.Models.Country", "Country")
-                        .WithMany("States")
+                        .WithMany("State")
                         .HasForeignKey("CountryId")
                         .IsRequired()
                         .HasConstraintName("FK_State_Country");
@@ -2033,7 +2031,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.User", b =>
                 {
                     b.HasOne("Call2Owner.Models.Role", "Role")
-                        .WithMany("Users")
+                        .WithMany("User")
                         .HasForeignKey("RoleId")
                         .IsRequired()
                         .HasConstraintName("FK_Users_Roles");
@@ -2044,7 +2042,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.UserParent", b =>
                 {
                     b.HasOne("Call2Owner.Models.User", "User")
-                        .WithMany("UserParents")
+                        .WithMany("UserParent")
                         .HasForeignKey("UserId")
                         .IsRequired()
                         .HasConstraintName("FK_UserParent_Users");
@@ -2055,7 +2053,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.UserProfile", b =>
                 {
                     b.HasOne("Call2Owner.Models.User", "User")
-                        .WithMany("UserProfiles")
+                        .WithMany("UserProfile")
                         .HasForeignKey("UserId")
                         .IsRequired()
                         .HasConstraintName("FK_UserProfile_Users");
@@ -2066,7 +2064,7 @@ namespace Call2Owner.API.Migrations
             modelBuilder.Entity("Call2Owner.Models.VisitingHelpCategoryCompany", b =>
                 {
                     b.HasOne("Call2Owner.Models.VisitingHelpCategory", "VisitingHelpCategory")
-                        .WithMany("VisitingHelpCategoryCompanies")
+                        .WithMany("VisitingHelpCategoryCompany")
                         .HasForeignKey("VisitingHelpCategoryId")
                         .IsRequired()
                         .HasConstraintName("FK_VisitingHelpCategoryCompany_VisitingHelpCategory");
@@ -2076,88 +2074,78 @@ namespace Call2Owner.API.Migrations
 
             modelBuilder.Entity("Call2Owner.Models.CabCompany", b =>
                 {
-                    b.Navigation("ResidentFrequentlyEntries");
+                    b.Navigation("ResidentFrequentlyEntry");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.City", b =>
                 {
-                    b.Navigation("Societies");
+                    b.Navigation("Society");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Country", b =>
                 {
-                    b.Navigation("Societies");
+                    b.Navigation("Society");
 
-                    b.Navigation("States");
+                    b.Navigation("State");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.DeliveryCompany", b =>
                 {
-                    b.Navigation("ResidentFrequentlyEntries");
+                    b.Navigation("ResidentFrequentlyEntry");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.EntityType", b =>
                 {
-                    b.Navigation("EntityTypeDetails");
+                    b.Navigation("EntityTypeDetail");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.EntityTypeDetail", b =>
                 {
-                    b.Navigation("ResidentDocumentUploadeds");
-
-                    b.Navigation("Residents");
-
-                    b.Navigation("SocietyDocumentUploadeds");
-
-                    b.Navigation("SocietyUserDocumentUploadeds");
+                    b.Navigation("Resident");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Module", b =>
                 {
-                    b.Navigation("ModulePermissions");
+                    b.Navigation("ModulePermission");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Resident", b =>
                 {
-                    b.Navigation("ResidentDocumentUploadeds");
+                    b.Navigation("ResidentFamily");
 
-                    b.Navigation("ResidentFamilies");
+                    b.Navigation("ResidentFrequentlyEntry");
 
-                    b.Navigation("ResidentFrequentlyEntries");
+                    b.Navigation("ResidentFrequentlyGuest");
 
-                    b.Navigation("ResidentFrequentlyGuests");
+                    b.Navigation("ResidentPet");
 
-                    b.Navigation("ResidentPets");
-
-                    b.Navigation("ResidentVehicles");
+                    b.Navigation("ResidentVehicle");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Role", b =>
                 {
                     b.Navigation("InverseParentRole");
 
-                    b.Navigation("RoleClaims");
+                    b.Navigation("RoleClaim");
 
-                    b.Navigation("Users");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.Society", b =>
                 {
-                    b.Navigation("SocietyBuildings");
+                    b.Navigation("SocietyBuilding");
 
-                    b.Navigation("SocietyDocumentUploadeds");
-
-                    b.Navigation("SocietyFlats");
+                    b.Navigation("SocietyFlat");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyBuilding", b =>
                 {
-                    b.Navigation("SocietyFlats");
+                    b.Navigation("SocietyFlat");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyFlat", b =>
                 {
-                    b.Navigation("Residents");
+                    b.Navigation("Resident");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.SocietyUser", b =>
@@ -2167,28 +2155,28 @@ namespace Call2Owner.API.Migrations
 
             modelBuilder.Entity("Call2Owner.Models.State", b =>
                 {
-                    b.Navigation("Cities");
+                    b.Navigation("City");
 
-                    b.Navigation("Societies");
+                    b.Navigation("Society");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.User", b =>
                 {
-                    b.Navigation("Residents");
+                    b.Navigation("Resident");
 
-                    b.Navigation("UserParents");
+                    b.Navigation("UserParent");
 
-                    b.Navigation("UserProfiles");
+                    b.Navigation("UserProfile");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.VisitingHelpCategory", b =>
                 {
-                    b.Navigation("VisitingHelpCategoryCompanies");
+                    b.Navigation("VisitingHelpCategoryCompany");
                 });
 
             modelBuilder.Entity("Call2Owner.Models.VisitingHelpCategoryCompany", b =>
                 {
-                    b.Navigation("ResidentFrequentlyEntries");
+                    b.Navigation("ResidentFrequentlyEntry");
                 });
 #pragma warning restore 612, 618
         }

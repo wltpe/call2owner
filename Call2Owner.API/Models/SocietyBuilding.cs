@@ -11,9 +11,9 @@ public partial class SocietyBuilding
 
     public string Name { get; set; } = null!;
 
-    public string? Description { get; set; } = null!;
+    public string? Description { get; set; }
 
-    public string? BuildingImage { get; set; } = null!;
+    public string? BuildingImage { get; set; }
 
     public bool IsFavourite { get; set; }
 
@@ -35,5 +35,5 @@ public partial class SocietyBuilding
 
     public virtual Society Society { get; set; } = null!;
 
-    public virtual ICollection<SocietyFlat> SocietyFlats { get; set; } = new List<SocietyFlat>();
+    public virtual ICollection<SocietyFlat> SocietyFlat { get; set; } = new List<SocietyFlat>();
 }

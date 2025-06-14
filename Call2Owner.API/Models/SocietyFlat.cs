@@ -35,7 +35,7 @@ public partial class SocietyFlat
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<Resident> Residents { get; set; } = new List<Resident>();
+    public virtual ICollection<Resident> Resident { get; set; } = new List<Resident>();
 
     public virtual Society Society { get; set; } = null!;
 

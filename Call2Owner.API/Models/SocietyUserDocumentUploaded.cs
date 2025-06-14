@@ -11,9 +11,10 @@ public partial class SocietyUserDocumentUploaded
 
     public int EntityTypeDetailId { get; set; }
 
-    public string? Name { get; set; } = null!;
+    public string? Name { get; set; }
 
     public string? Value { get; set; }
+
     public string? DetailJson { get; set; }
 
     public bool IsActive { get; set; }
@@ -32,7 +33,7 @@ public partial class SocietyUserDocumentUploaded
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual SocietyUser SocietyUser { get; set; } = null!;
-
     public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
+
+    public virtual SocietyUser SocietyUser { get; set; } = null!;
 }

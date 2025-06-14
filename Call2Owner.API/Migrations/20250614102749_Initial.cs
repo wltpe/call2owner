@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Call2Owner.API.Migrations
 {
     /// <inheritdoc />
-    public partial class initial : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -372,60 +372,6 @@ namespace Call2Owner.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ResidentDocumentRequiredToRegister",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: false),
-                    Value = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    IsRequired = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    CreatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    UpdatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: true),
-                    DeletedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    DeletedOn = table.Column<DateTime>(type: "datetime", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ResidentDocumentRequiredToRegister", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ResidentDocumentRequiredToRegister_EntityTypeDetails",
-                        column: x => x.EntityTypeDetailId,
-                        principalTable: "EntityTypeDetail",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SocietyDocumentRequiredToRegister",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: false),
-                    Value = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsRequired = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    CreatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    UpdatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: true),
-                    DeletedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    DeletedOn = table.Column<DateTime>(type: "datetime", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SocietyDocumentRequiredToRegister", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SocietyDocRequired_EntityTypeDetails",
-                        column: x => x.EntityTypeDetailId,
-                        principalTable: "EntityTypeDetail",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserParent",
                 columns: table => new
                 {
@@ -537,8 +483,8 @@ namespace Call2Owner.API.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SocietyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    BuildingImage = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BuildingImage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsFavourite = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
@@ -565,31 +511,77 @@ namespace Call2Owner.API.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SocietyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SocietyDocumentRequiredToRegisterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Url = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DetailJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    CreatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    UpdatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
-                    DeletedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    DeletedOn = table.Column<DateTime>(type: "datetime", nullable: true)
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeletedOn = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SocietyDocumentUploaded", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_SocietyDocumentUploaded_RequiredDoc",
-                        column: x => x.SocietyDocumentRequiredToRegisterId,
-                        principalTable: "SocietyDocumentRequiredToRegister",
+                        name: "FK_SocietyDocumentUploaded_EntityTypeDetail_EntityTypeDetailId",
+                        column: x => x.EntityTypeDetailId,
+                        principalTable: "EntityTypeDetail",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SocietyDocumentUploaded_Society_SocietyId",
+                        column: x => x.SocietyId,
+                        principalTable: "Society",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SocietyUser",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SocietyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: true),
+                    IsDocumentUploaded = table.Column<bool>(type: "bit", nullable: false),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ApprovedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovedComment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeletedOn = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SocietyUser", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SocietyUser_EntityTypeDetail_EntityTypeDetailId",
+                        column: x => x.EntityTypeDetailId,
+                        principalTable: "EntityTypeDetail",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_SocietyDocumentUploaded_Society",
+                        name: "FK_SocietyUser_Society_SocietyId",
                         column: x => x.SocietyId,
                         principalTable: "Society",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_SocietyUser_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -600,8 +592,8 @@ namespace Call2Owner.API.Migrations
                     SocietyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SocietyBuildingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FlatImage = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FlatImage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsFavourite = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
@@ -628,18 +620,54 @@ namespace Call2Owner.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SocietyUserDocumentUploaded",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SocietyUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DetailJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeletedOn = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SocietyUserDocumentUploaded", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SocietyUserDocumentUploaded_EntityTypeDetail_EntityTypeDetailId",
+                        column: x => x.EntityTypeDetailId,
+                        principalTable: "EntityTypeDetail",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SocietyUserDocumentUploaded_SocietyUser_SocietyUserId",
+                        column: x => x.SocietyUserId,
+                        principalTable: "SocietyUser",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Resident",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SocietyFlatId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SocietyFlatId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     EntityTypeDetailId = table.Column<int>(type: "int", nullable: true),
                     IsDocumentUploaded = table.Column<bool>(type: "bit", nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false),
-                    ApprovedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     ApprovedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    ApprovedComment = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    ApprovedComment = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
@@ -675,31 +703,34 @@ namespace Call2Owner.API.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ResidentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ResidentDocumentRequiredToRegisterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Url = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    EntityTypeDetailId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DetailJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    CreatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    UpdatedOn = table.Column<DateTime>(type: "datetime", nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
-                    DeletedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    DeletedOn = table.Column<DateTime>(type: "datetime", nullable: true)
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeletedOn = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ResidentDocumentUploaded", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ResidentDocumentUploaded_DocRequirement",
-                        column: x => x.ResidentDocumentRequiredToRegisterId,
-                        principalTable: "ResidentDocumentRequiredToRegister",
-                        principalColumn: "Id");
+                        name: "FK_ResidentDocumentUploaded_EntityTypeDetail_EntityTypeDetailId",
+                        column: x => x.EntityTypeDetailId,
+                        principalTable: "EntityTypeDetail",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ResidentDocumentUploaded_Resident",
+                        name: "FK_ResidentDocumentUploaded_Resident_ResidentId",
                         column: x => x.ResidentId,
                         principalTable: "Resident",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -920,14 +951,9 @@ namespace Call2Owner.API.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ResidentDocumentRequiredToRegister_EntityTypeDetailId",
-                table: "ResidentDocumentRequiredToRegister",
-                column: "EntityTypeDetailId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ResidentDocumentUploaded_ResidentDocumentRequiredToRegisterId",
+                name: "IX_ResidentDocumentUploaded_EntityTypeDetailId",
                 table: "ResidentDocumentUploaded",
-                column: "ResidentDocumentRequiredToRegisterId");
+                column: "EntityTypeDetailId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ResidentDocumentUploaded_ResidentId",
@@ -1005,14 +1031,9 @@ namespace Call2Owner.API.Migrations
                 column: "SocietyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SocietyDocumentRequiredToRegister_EntityTypeDetailId",
-                table: "SocietyDocumentRequiredToRegister",
-                column: "EntityTypeDetailId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SocietyDocumentUploaded_SocietyDocumentRequiredToRegisterId",
+                name: "IX_SocietyDocumentUploaded_EntityTypeDetailId",
                 table: "SocietyDocumentUploaded",
-                column: "SocietyDocumentRequiredToRegisterId");
+                column: "EntityTypeDetailId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SocietyDocumentUploaded_SocietyId",
@@ -1028,6 +1049,31 @@ namespace Call2Owner.API.Migrations
                 name: "IX_SocietyFlat_SocietyId",
                 table: "SocietyFlat",
                 column: "SocietyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SocietyUser_EntityTypeDetailId",
+                table: "SocietyUser",
+                column: "EntityTypeDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SocietyUser_SocietyId",
+                table: "SocietyUser",
+                column: "SocietyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SocietyUser_UserId",
+                table: "SocietyUser",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SocietyUserDocumentUploaded_EntityTypeDetailId",
+                table: "SocietyUserDocumentUploaded",
+                column: "EntityTypeDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SocietyUserDocumentUploaded_SocietyUserId",
+                table: "SocietyUserDocumentUploaded",
+                column: "SocietyUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_State_CountryId",
@@ -1089,6 +1135,9 @@ namespace Call2Owner.API.Migrations
                 name: "SocietyDocumentUploaded");
 
             migrationBuilder.DropTable(
+                name: "SocietyUserDocumentUploaded");
+
+            migrationBuilder.DropTable(
                 name: "UserParent");
 
             migrationBuilder.DropTable(
@@ -1096,9 +1145,6 @@ namespace Call2Owner.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "Module");
-
-            migrationBuilder.DropTable(
-                name: "ResidentDocumentRequiredToRegister");
 
             migrationBuilder.DropTable(
                 name: "CabCompany");
@@ -1113,7 +1159,7 @@ namespace Call2Owner.API.Migrations
                 name: "Resident");
 
             migrationBuilder.DropTable(
-                name: "SocietyDocumentRequiredToRegister");
+                name: "SocietyUser");
 
             migrationBuilder.DropTable(
                 name: "VisitingHelpCategory");
@@ -1122,19 +1168,19 @@ namespace Call2Owner.API.Migrations
                 name: "SocietyFlat");
 
             migrationBuilder.DropTable(
-                name: "User");
+                name: "EntityTypeDetail");
 
             migrationBuilder.DropTable(
-                name: "EntityTypeDetail");
+                name: "User");
 
             migrationBuilder.DropTable(
                 name: "SocietyBuilding");
 
             migrationBuilder.DropTable(
-                name: "Role");
+                name: "EntityType");
 
             migrationBuilder.DropTable(
-                name: "EntityType");
+                name: "Role");
 
             migrationBuilder.DropTable(
                 name: "Society");

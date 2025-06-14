@@ -33,7 +33,7 @@ namespace Call2Owner
             CreateMap<Role, RoleDetailDto>()
                 .ForMember(dest => dest.ParentRoleId, opt => opt.MapFrom(src => src.ParentRoleId))
                 .ForMember(dest => dest.ParentRoleName, opt => opt.MapFrom(src => src.ParentRole != null ? src.ParentRole.RoleName : null))
-                .ForMember(dest => dest.RoleClaims, opt => opt.MapFrom(src => src.RoleClaims));
+                .ForMember(dest => dest.RoleClaims, opt => opt.MapFrom(src => src.RoleClaim));
 
             CreateMap<Society, SocietyApprovalDto>().ReverseMap();
             CreateMap<Society, SocietyDto>().ReverseMap();

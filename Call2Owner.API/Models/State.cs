@@ -35,9 +35,9 @@ public partial class State
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<City> Cities { get; set; } = new List<City>();
+    public virtual ICollection<City> City { get; set; } = new List<City>();
 
     public virtual Country Country { get; set; } = null!;
 
-    public virtual ICollection<Society> Societies { get; set; } = new List<Society>();
+    public virtual ICollection<Society> Society { get; set; } = new List<Society>();
 }

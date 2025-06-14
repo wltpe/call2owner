@@ -51,12 +51,12 @@ namespace Call2Owner.Controllers
                 .ToListAsync();
 
             var modules = await _context.Module
-                .Include(x => x.ModulePermissions)
+                .Include(x => x.ModulePermission)
                 .Select(x => new
                 {
                     ModuleId = x.ModuleId,
                     ModuleName = x.ModuleName,
-                    Permissions = x.ModulePermissions.ToList()
+                    Permissions = x.ModulePermission.ToList()
                 })
                 .Distinct()
                 .ToListAsync();

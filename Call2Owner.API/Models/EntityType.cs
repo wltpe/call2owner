@@ -29,5 +29,5 @@ public partial class EntityType
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<EntityTypeDetail> EntityTypeDetails { get; set; } = new List<EntityTypeDetail>();
+    public virtual ICollection<EntityTypeDetail> EntityTypeDetail { get; set; } = new List<EntityTypeDetail>();
 }

@@ -147,7 +147,7 @@ namespace Oversight.Controllers
         public async Task<ActionResult<RoleDetailDto>> GetRoleById(int id)
         {
             var role = await _context.Role
-                .Include(r => r.RoleClaims)
+                .Include(r => r.RoleClaim)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (role == null)
@@ -245,7 +245,7 @@ namespace Oversight.Controllers
         {
             var role = await _context.Role
                 .Include(r => r.ParentRole)
-                .Include(r => r.RoleClaims)
+                .Include(r => r.RoleClaim)
                 .FirstOrDefaultAsync(r => r.Id == roleId);
 
             if (role == null)
@@ -276,7 +276,7 @@ namespace Oversight.Controllers
                 DisplayName = role.DisplayName,
                 ParentRoleId = role.ParentRoleId,
                 ParentRoleName = role.ParentRole?.RoleName,
-                RoleClaims = role.RoleClaims.FirstOrDefault()?.ModulePermissionsJson
+                RoleClaims = role.RoleClaim.FirstOrDefault()?.ModulePermissionsJson
             };
 
             return Ok(roleDetailDto);

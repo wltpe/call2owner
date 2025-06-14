@@ -189,7 +189,7 @@ namespace Call2Owner.Controllers
 
             var user = await _context.User
                 .Include(u => u.Role)
-                    .ThenInclude(r => r.RoleClaims)
+                    .ThenInclude(r => r.RoleClaim)
                 .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);
 
             if (user == null)
@@ -209,7 +209,7 @@ namespace Call2Owner.Controllers
             await _context.SaveChangesAsync();
 
             // ✅ Get RoleClaims
-            var roleClaimValues = user.Role?.RoleClaims
+            var roleClaimValues = user.Role?.RoleClaim
                                     .OrderBy(rc => rc.Id)
                                     .Select(rc => rc.ModulePermissionsJson.ToString())
                                     .FirstOrDefault();

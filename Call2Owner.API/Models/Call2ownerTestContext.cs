@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Call2Owner.Models;
 
-public partial class DataContext : DbContext
+public partial class Call2ownerTestContext : DbContext
 {
-    public DataContext()
+    public Call2ownerTestContext()
     {
     }
 
-    public DataContext(DbContextOptions<DataContext> options)
+    public Call2ownerTestContext(DbContextOptions<Call2ownerTestContext> options)
         : base(options)
     {
     }
@@ -74,6 +74,10 @@ public partial class DataContext : DbContext
     public virtual DbSet<VisitingHelpCategory> VisitingHelpCategory { get; set; }
 
     public virtual DbSet<VisitingHelpCategoryCompany> VisitingHelpCategoryCompany { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Data Source=103.67.182.216,2499;Initial Catalog=call2owner_test;User ID=sa;Password=j3x0rGPI1ozN;Trust Server Certificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

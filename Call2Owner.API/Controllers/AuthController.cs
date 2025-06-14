@@ -257,7 +257,7 @@ namespace Call2Owner.Controllers
 
             var user = await _context.User
                 .Include(u => u.Role)
-                    .ThenInclude(r => r.RoleClaims) // Include RoleClaims under Role
+                    .ThenInclude(r => r.RoleClaim) // Include RoleClaims under Role
                 .FirstOrDefaultAsync(u => u.Email == model.Email);
 
             if (user == null || !user.IsActive.GetValueOrDefault() || !user.IsVerified.GetValueOrDefault())
@@ -269,7 +269,7 @@ namespace Call2Owner.Controllers
             if (!BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
                 return Unauthorized(new { message = "Invalid Password!" });
 
-            var roleClaimValues = user.Role.RoleClaims
+            var roleClaimValues = user.Role.RoleClaim
                                 .OrderBy(rc => rc.Id)
                                 .Select(rc => rc.ModulePermissionsJson.ToString())
                                 .FirstOrDefault();

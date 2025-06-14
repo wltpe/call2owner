@@ -21,7 +21,7 @@ public partial class SocietyUser
 
     public DateTime? ApprovedOn { get; set; }
 
-    public string? ApprovedComment { get; set; } 
+    public string? ApprovedComment { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -41,9 +41,9 @@ public partial class SocietyUser
 
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
-    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
+    public virtual Society? Society { get; set; }
 
-    public virtual Society Society { get; set; } = null!;
+    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploaded { get; set; } = new List<SocietyUserDocumentUploaded>();
 
     public virtual User User { get; set; } = null!;
 }

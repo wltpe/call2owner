@@ -21,7 +21,7 @@ public partial class Resident
 
     public DateTime? ApprovedOn { get; set; }
 
-    public string? ApprovedComment { get; set; } 
+    public string? ApprovedComment { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -41,19 +41,19 @@ public partial class Resident
 
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
-    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploadeds { get; set; } = new List<ResidentDocumentUploaded>();
+    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploaded { get; set; } = new List<ResidentDocumentUploaded>();
 
-    public virtual ICollection<ResidentFamily> ResidentFamilies { get; set; } = new List<ResidentFamily>();
+    public virtual ICollection<ResidentFamily> ResidentFamily { get; set; } = new List<ResidentFamily>();
 
-    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntries { get; set; } = new List<ResidentFrequentlyEntry>();
+    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntry { get; set; } = new List<ResidentFrequentlyEntry>();
 
-    public virtual ICollection<ResidentFrequentlyGuest> ResidentFrequentlyGuests { get; set; } = new List<ResidentFrequentlyGuest>();
+    public virtual ICollection<ResidentFrequentlyGuest> ResidentFrequentlyGuest { get; set; } = new List<ResidentFrequentlyGuest>();
 
-    public virtual ICollection<ResidentPet> ResidentPets { get; set; } = new List<ResidentPet>();
+    public virtual ICollection<ResidentPet> ResidentPet { get; set; } = new List<ResidentPet>();
 
-    public virtual ICollection<ResidentVehicle> ResidentVehicles { get; set; } = new List<ResidentVehicle>();
+    public virtual ICollection<ResidentVehicle> ResidentVehicle { get; set; } = new List<ResidentVehicle>();
 
-    public virtual SocietyFlat SocietyFlat { get; set; } = null!;
+    public virtual SocietyFlat? SocietyFlat { get; set; }
 
     public virtual User User { get; set; } = null!;
 }

@@ -25,5 +25,5 @@ public partial class VisitingHelpCategory
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<VisitingHelpCategoryCompany> VisitingHelpCategoryCompanies { get; set; } = new List<VisitingHelpCategoryCompany>();
+    public virtual ICollection<VisitingHelpCategoryCompany> VisitingHelpCategoryCompany { get; set; } = new List<VisitingHelpCategoryCompany>();
 }

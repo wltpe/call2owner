@@ -59,11 +59,13 @@ public partial class User
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<Resident> Residents { get; set; } = new List<Resident>();
+    public virtual ICollection<Resident> Resident { get; set; } = new List<Resident>();
 
     public virtual Role Role { get; set; } = null!;
 
-    public virtual ICollection<UserParent> UserParents { get; set; } = new List<UserParent>();
+    public virtual ICollection<SocietyUser> SocietyUser { get; set; } = new List<SocietyUser>();
 
-    public virtual ICollection<UserProfile> UserProfiles { get; set; } = new List<UserProfile>();
+    public virtual ICollection<UserParent> UserParent { get; set; } = new List<UserParent>();
+
+    public virtual ICollection<UserProfile> UserProfile { get; set; } = new List<UserProfile>();
 }

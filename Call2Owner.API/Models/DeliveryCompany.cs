@@ -27,5 +27,5 @@ public partial class DeliveryCompany
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntries { get; set; } = new List<ResidentFrequentlyEntry>();
+    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntry { get; set; } = new List<ResidentFrequentlyEntry>();
 }

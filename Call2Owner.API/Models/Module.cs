@@ -9,5 +9,5 @@ public partial class Module
 
     public string ModuleName { get; set; } = null!;
 
-    public virtual ICollection<ModulePermission> ModulePermissions { get; set; } = new List<ModulePermission>();
+    public virtual ICollection<ModulePermission> ModulePermission { get; set; } = new List<ModulePermission>();
 }
