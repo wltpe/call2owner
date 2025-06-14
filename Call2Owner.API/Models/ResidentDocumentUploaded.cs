@@ -9,11 +9,12 @@ public partial class ResidentDocumentUploaded
 
     public Guid ResidentId { get; set; }
 
-    public Guid ResidentDocumentRequiredToRegisterId { get; set; }
+    public int EntityTypeDetailId { get; set; }
 
-    public string Name { get; set; } = null!;
+    public string? Name { get; set; } = null!;
 
-    public string? Url { get; set; }
+    public string? Value { get; set; }
+    public string? DetailJson { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -33,5 +34,6 @@ public partial class ResidentDocumentUploaded
 
     public virtual Resident Resident { get; set; } = null!;
 
-    public virtual ResidentDocumentRequiredToRegister ResidentDocumentRequiredToRegister { get; set; } = null!;
+    public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
+
 }

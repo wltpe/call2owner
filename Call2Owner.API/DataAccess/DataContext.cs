@@ -35,8 +35,6 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<Resident> Resident { get; set; }
 
-    public virtual DbSet<ResidentDocumentRequiredToRegister> ResidentDocumentRequiredToRegister { get; set; }
-
     public virtual DbSet<ResidentDocumentUploaded> ResidentDocumentUploaded { get; set; }
 
     public virtual DbSet<ResidentFamily> ResidentFamily { get; set; }
@@ -54,10 +52,11 @@ public partial class DataContext : DbContext
     public virtual DbSet<RoleClaim> RoleClaim { get; set; }
 
     public virtual DbSet<Society> Society { get; set; }
+    public virtual DbSet<SocietyUser> SocietyUser { get; set; }
+
+    public virtual DbSet<SocietyUserDocumentUploaded> SocietyUserDocumentUploaded { get; set; }
 
     public virtual DbSet<SocietyBuilding> SocietyBuilding { get; set; }
-
-    public virtual DbSet<SocietyDocumentRequiredToRegister> SocietyDocumentRequiredToRegister { get; set; }
 
     public virtual DbSet<SocietyDocumentUploaded> SocietyDocumentUploaded { get; set; }
 
@@ -192,50 +191,6 @@ public partial class DataContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Resident_Users");
-        });
-
-        modelBuilder.Entity<ResidentDocumentRequiredToRegister>(entity =>
-        {
-            entity.ToTable("ResidentDocumentRequiredToRegister");
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
-            entity.Property(e => e.DeletedBy).HasMaxLength(255);
-            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
-            entity.Property(e => e.UpdatedBy).HasMaxLength(255);
-            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
-            entity.Property(e => e.Value).HasMaxLength(255);
-
-            entity.HasOne(d => d.EntityTypeDetail).WithMany(p => p.ResidentDocumentRequiredToRegisters)
-                .HasForeignKey(d => d.EntityTypeDetailId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ResidentDocumentRequiredToRegister_EntityTypeDetails");
-        });
-
-        modelBuilder.Entity<ResidentDocumentUploaded>(entity =>
-        {
-            entity.ToTable("ResidentDocumentUploaded");
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
-            entity.Property(e => e.DeletedBy).HasMaxLength(255);
-            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
-            entity.Property(e => e.Name).HasMaxLength(255);
-            entity.Property(e => e.UpdatedBy).HasMaxLength(255);
-            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
-            entity.Property(e => e.Url).HasMaxLength(500);
-
-            entity.HasOne(d => d.ResidentDocumentRequiredToRegister).WithMany(p => p.ResidentDocumentUploadeds)
-                .HasForeignKey(d => d.ResidentDocumentRequiredToRegisterId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ResidentDocumentUploaded_DocRequirement");
-
-            entity.HasOne(d => d.Resident).WithMany(p => p.ResidentDocumentUploadeds)
-                .HasForeignKey(d => d.ResidentId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ResidentDocumentUploaded_Resident");
         });
 
         modelBuilder.Entity<ResidentFamily>(entity =>
@@ -475,24 +430,6 @@ public partial class DataContext : DbContext
                 .HasConstraintName("FK_SocietyBuilding_Society");
         });
 
-        modelBuilder.Entity<SocietyDocumentRequiredToRegister>(entity =>
-        {
-            entity.ToTable("SocietyDocumentRequiredToRegister");
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
-            entity.Property(e => e.DeletedBy).HasMaxLength(255);
-            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
-            entity.Property(e => e.UpdatedBy).HasMaxLength(255);
-            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
-
-            entity.HasOne(d => d.EntityTypeDetail).WithMany(p => p.SocietyDocumentRequiredToRegisters)
-                .HasForeignKey(d => d.EntityTypeDetailId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_SocietyDocRequired_EntityTypeDetails");
-        });
-
         modelBuilder.Entity<SocietyDocumentUploaded>(entity =>
         {
             entity.ToTable("SocietyDocumentUploaded");
@@ -505,8 +442,8 @@ public partial class DataContext : DbContext
             entity.Property(e => e.UpdatedBy).HasMaxLength(255);
             entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
 
-            entity.HasOne(d => d.SocietyDocumentRequiredToRegister).WithMany(p => p.SocietyDocumentUploadeds)
-                .HasForeignKey(d => d.SocietyDocumentRequiredToRegisterId)
+            entity.HasOne(d => d.EntityTypeDetail).WithMany(p => p.SocietyDocumentUploadeds)
+                .HasForeignKey(d => d.EntityTypeDetailId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_SocietyDocumentUploaded_RequiredDoc");
 

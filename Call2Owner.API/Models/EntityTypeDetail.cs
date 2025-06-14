@@ -35,9 +35,8 @@ public partial class EntityTypeDetail
 
     public virtual EntityType EntityType { get; set; } = null!;
 
-    public virtual ICollection<ResidentDocumentRequiredToRegister> ResidentDocumentRequiredToRegisters { get; set; } = new List<ResidentDocumentRequiredToRegister>();
-
     public virtual ICollection<Resident> Residents { get; set; } = new List<Resident>();
-
-    public virtual ICollection<SocietyDocumentRequiredToRegister> SocietyDocumentRequiredToRegisters { get; set; } = new List<SocietyDocumentRequiredToRegister>();
+    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploadeds { get; set; } = new List<ResidentDocumentUploaded>();
+    public virtual ICollection<SocietyDocumentUploaded> SocietyDocumentUploadeds { get; set; } = new List<SocietyDocumentUploaded>();
+    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
 }

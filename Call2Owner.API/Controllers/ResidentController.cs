@@ -526,9 +526,9 @@ namespace Call2Owner.Controllers
                 {
                     Id = Id,
                     ResidentId = parsedResidentId,
-                    ResidentDocumentRequiredToRegisterId = residentDocumentId,
+                  //  ResidentDocumentRequiredToRegisterId = residentDocumentId,
                     Name = obj.Name,
-                    Url = blobName,
+                  //  Url = blobName,
                     IsActive = true,
                     CreatedBy = currentUserId,
                     CreatedOn = DateTime.UtcNow,
@@ -665,7 +665,7 @@ namespace Call2Owner.Controllers
             // Check if a record already exists
             var userExists = await _context.ResidentDocumentUploaded.FirstOrDefaultAsync(x =>
                                     x.ResidentId == obj.ResidentId
-                                    && x.ResidentDocumentRequiredToRegisterId == obj.ResidentDocumentRequiredToRegisterId
+                                  //  && x.ResidentDocumentRequiredToRegisterId == obj.ResidentDocumentRequiredToRegisterId
                                     && x.IsDeleted != true
                                     && x.IsActive == true);
 

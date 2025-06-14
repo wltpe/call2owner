@@ -9,12 +9,12 @@ public partial class SocietyDocumentUploaded
 
     public Guid SocietyId { get; set; }
 
-    public Guid SocietyDocumentRequiredToRegisterId { get; set; }
+    public int EntityTypeDetailId { get; set; }
 
-    public string Name { get; set; } = null!;
+    public string? Name { get; set; } = null!;
 
-    public string Url { get; set; } = null!;
-
+    public string? Value { get; set; }
+    public string? DetailJson { get; set; }
     public bool IsActive { get; set; }
 
     public string CreatedBy { get; set; } = null!;
@@ -33,5 +33,5 @@ public partial class SocietyDocumentUploaded
 
     public virtual Society Society { get; set; } = null!;
 
-    public virtual SocietyDocumentRequiredToRegister SocietyDocumentRequiredToRegister { get; set; } = null!;
+    public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
 }

@@ -3,15 +3,18 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class ResidentDocumentRequiredToRegister
+public partial class SocietyUserDocumentUploaded
 {
     public Guid Id { get; set; }
 
+    public Guid SocietyUserId { get; set; }
+
     public int EntityTypeDetailId { get; set; }
 
-    public string Value { get; set; } = null!;
+    public string? Name { get; set; } = null!;
 
-    public bool IsRequired { get; set; }
+    public string? Value { get; set; }
+    public string? DetailJson { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -29,7 +32,7 @@ public partial class ResidentDocumentRequiredToRegister
 
     public DateTime? DeletedOn { get; set; }
 
-    public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
+    public virtual SocietyUser SocietyUser { get; set; } = null!;
 
-    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploadeds { get; set; } = new List<ResidentDocumentUploaded>();
+    public virtual EntityTypeDetail EntityTypeDetail { get; set; } = null!;
 }

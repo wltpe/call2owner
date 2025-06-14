@@ -33,69 +33,69 @@ namespace Call2Owner.Controllers
             _mapper = mapper;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<SocietyDocumentRequiredToRegisterDTO>>> GetAll()
-        {
-            var entities = await _context.SocietyDocumentRequiredToRegister
-                .Where(d => d.IsDeleted != true)
-                .ToListAsync();
+        //[HttpGet]
+        //public async Task<ActionResult<IEnumerable<SocietyDocumentRequiredToRegisterDTO>>> GetAll()
+        //{
+        //    var entities = await _context.SocietyDocumentRequiredToRegister
+        //        .Where(d => d.IsDeleted != true)
+        //        .ToListAsync();
 
-            return Ok(_mapper.Map<List<SocietyDocumentRequiredToRegisterDTO>>(entities));
-        }
+        //    return Ok(_mapper.Map<List<SocietyDocumentRequiredToRegisterDTO>>(entities));
+        //}
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<SocietyDocumentRequiredToRegisterDTO>> GetById(int id)
-        {
-            var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
-            if (entity == null || entity.IsDeleted == true)
-                return NotFound();
+        //[HttpGet("{id}")]
+        //public async Task<ActionResult<SocietyDocumentRequiredToRegisterDTO>> GetById(int id)
+        //{
+        //    var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
+        //    if (entity == null || entity.IsDeleted == true)
+        //        return NotFound();
 
-            return Ok(_mapper.Map<SocietyDocumentRequiredToRegisterDTO>(entity));
-        }
+        //    return Ok(_mapper.Map<SocietyDocumentRequiredToRegisterDTO>(entity));
+        //}
 
-        [HttpPost]
-        public async Task<ActionResult<SocietyDocumentRequiredToRegisterDTO>> Create(SocietyDocumentRequiredToRegisterDTO dto)
-        {
-            var entity = _mapper.Map<SocietyDocumentRequiredToRegister>(dto);
-            entity.CreatedOn = DateTime.UtcNow;
-            entity.IsActive = true;
+        //[HttpPost]
+        //public async Task<ActionResult<SocietyDocumentRequiredToRegisterDTO>> Create(SocietyDocumentRequiredToRegisterDTO dto)
+        //{
+        //    var entity = _mapper.Map<SocietyDocumentRequiredToRegister>(dto);
+        //    entity.CreatedOn = DateTime.UtcNow;
+        //    entity.IsActive = true;
 
-            _context.SocietyDocumentRequiredToRegister.Add(entity);
-            await _context.SaveChangesAsync();
+        //    _context.SocietyDocumentRequiredToRegister.Add(entity);
+        //    await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = entity.Id }, _mapper.Map<SocietyDocumentRequiredToRegisterDTO>(entity));
-        }
+        //    return CreatedAtAction(nameof(GetById), new { id = entity.Id }, _mapper.Map<SocietyDocumentRequiredToRegisterDTO>(entity));
+        //}
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, SocietyDocumentRequiredToRegisterDTO dto)
-        {
-            if (id != dto.Id)
-                return BadRequest();
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> Update(Guid id, SocietyDocumentRequiredToRegisterDTO dto)
+        //{
+        //    if (id != dto.Id)
+        //        return BadRequest();
 
-            var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
-            if (entity == null || entity.IsDeleted == true)
-                return NotFound();
+        //    var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
+        //    if (entity == null || entity.IsDeleted == true)
+        //        return NotFound();
 
-            _mapper.Map(dto, entity);
-            entity.UpdatedOn = DateTime.UtcNow;
+        //    _mapper.Map(dto, entity);
+        //    entity.UpdatedOn = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
+        //    await _context.SaveChangesAsync();
+        //    return NoContent();
+        //}
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
-            if (entity == null || entity.IsDeleted == true)
-                return NotFound();
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> Delete(int id)
+        //{
+        //    var entity = await _context.SocietyDocumentRequiredToRegister.FindAsync(id);
+        //    if (entity == null || entity.IsDeleted == true)
+        //        return NotFound();
 
-            entity.IsDeleted = true;
-            entity.DeletedOn = DateTime.UtcNow;
-            entity.DeletedBy = "System"; // Replace with current user if available
+        //    entity.IsDeleted = true;
+        //    entity.DeletedOn = DateTime.UtcNow;
+        //    entity.DeletedBy = "System"; // Replace with current user if available
 
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
+        //    await _context.SaveChangesAsync();
+        //    return NoContent();
+        //}
     }
 }

@@ -20,6 +20,15 @@ namespace Utilities
         public const string SocietyAdmin = "303";
         public const string Resident = "304";
         public const string Guest = "305";
+        public const string SocietyUser = "306";
+        public const string Maid = "307";
+        public const string Milkman = "308";
+        public const string CarCleaner = "309";
+        public const string TuitionTeacher = "310";
+        public const string Nurse = "311";
+        public const string Staff = "312";
+        public const string Others = "313";
+        public const string DogWalker = "314";
     }
 
     public class Module
