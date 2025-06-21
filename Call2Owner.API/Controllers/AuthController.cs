@@ -170,6 +170,117 @@ namespace Call2Owner.Controllers
             return Ok(new { message = "User registered successfully! Check your email to set a password." });
         }
 
+        [HttpPost("society/user/register")]
+
+        public async Task<IActionResult> SocietyUserRegister([FromBody] SocietyUserDto model)
+        {
+            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            if (currentUserId == "0")
+                return Unauthorized(new { message = "Invalid user." });
+
+            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
+            if (currentUser == null)
+                return Unauthorized(new { message = "User not found or unauthorized." });
+
+            var token = HttpContext.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(token))
+            {
+                return Unauthorized(new { message = "Missing Authorization Token" });
+            }
+
+            token = token.Replace("Bearer ", "");
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            var roleId = jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
+
+            if (currentUser.RoleId == Convert.ToInt32(UserRoles.Admin))
+            {
+                // Forcefully assign InsurerCustomer role, no need for client to send it
+                model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
+            }
+
+            if (await _context.User.AnyAsync(u => u.Email == model.Email))
+                return BadRequest(new { message = "Email already exists!" });
+
+
+            // Ensure that the new user cannot have the same role as the current user
+            if (currentUser.RoleId == model.RoleId)
+                return BadRequest(new { message = "You cannot assign the same role as yours." });
+            // Validate whether the current user can assign the requested role
+            string role = GetUserRoleFromToken();
+
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
+            if (!validChildRole && (role != UserRoles.SuperAdmin || role != UserRoles.Admin || role != UserRoles.SocietyAdmin))
+                return Forbid("You do not have permission to assign this role.");
+
+            var verificationCode = Guid.NewGuid().ToString();
+
+            string encryptedEmail = Encrypt(model.Email);
+            string encryptedToken = Encrypt(verificationCode);
+
+
+            string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
+
+            Guid Username = Guid.NewGuid();
+
+            var user = new User
+            {
+                Id = Username,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                Email = model.Email,
+                MobileNumber = model.MobileNumber,
+                RoleId = model.RoleId,
+                VerificationCode = verificationCode,
+                VerificationCodeGenerationTime = DateTime.UtcNow,
+                IsActive = true,
+                IsDeleted = false,
+                IsVerified = false,
+                CreatedBy = currentUserId,
+                CreatedOn = DateTime.UtcNow
+                //     ResetLink = resetLink
+            };
+
+            await _context.User.AddAsync(user);
+
+
+            await _context.SaveChangesAsync();
+
+
+            if (user.RoleId == Convert.ToInt32(UserRoles.Admin))
+            {
+                var insurerToSendDTO = new InsurerUserDTO
+                {
+                    UserId = user.Id,
+                    InsurerId = Guid.Parse(currentUserId),
+                    IsActive = user.IsActive ?? false,
+                    IsDeleted = user.IsDeleted ?? false
+                };
+
+
+                //var postRequest = new RestRequest("https://localhost:7046/api/Insurer/add-insurer-user", Method.Post);
+                var postRequest = new RestRequest("https://outinsurer.kindlebit.com/api/Insurer/add-insurer-user", Method.Post);
+                postRequest.AddHeader("accept", "application/json");
+                postRequest.AddHeader("Content-Type", "application/json");
+                postRequest.AddHeader("Authorization", $"Bearer {token}");
+
+                // Send the updated/confirmed DTO
+                postRequest.AddJsonBody(insurerToSendDTO);
+
+                var postResponse = await _client.ExecuteAsync(postRequest);
+
+            }
+
+            string jsonVariables = JsonConvert.SerializeObject(user);
+            var recipientEmail = Helper.ExtractMatchingValues(jsonVariables);
+            HttpContext.Items["RecipientEmail"] = recipientEmail;
+            HttpContext.Items["VariablesRaw"] = jsonVariables;
+            //await SendVerificationEmail(user.Email, verificationCode);
+
+            return Ok(new { message = "User registered successfully! Check your email to set a password." });
+        }
+
         [Authorize(Policy = Utilities.Module.UserManagement)]
         [Authorize(Policy = Utilities.Permission.GetById)]
         [Authorize] // Ensure only authenticated users can access this

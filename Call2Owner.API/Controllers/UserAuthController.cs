@@ -225,16 +225,16 @@ namespace Call2Owner.Controllers
         }
         
         [HttpPost("resident/approve")]
-        public async Task<IActionResult> ResidentApprove(Guid ResidentId, [FromBody] ResidentApprovalDto model)
+        public async Task<IActionResult> ResidentApprove([FromBody] ResidentApprovalDto model)
         {
             var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            var resident = await _context.Resident.FindAsync(ResidentId);
+            var resident = await _context.Resident.FindAsync(model.ResidentId);
             if (resident == null || resident.IsDeleted == true)
                 return NotFound();
 
             if (resident.IsApproved == true)
-                return NotFound("Already Approved");
+                return NotFound(new { message = "Already Approved" });
 
             resident.IsApproved = model.IsApproved;
             resident.ApprovedBy = currentUserId;
@@ -242,21 +242,32 @@ namespace Call2Owner.Controllers
             resident.ApprovedOn = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(_mapper.Map<ResidentDto>(resident));
+
+            var obj = _mapper.Map<UpdateResidentDto>(resident);
+
+            if (obj != null)
+            {
+                obj.ResidentType = JsonConvert.DeserializeObject<UploadSelectedRecord>(obj.DetailJson);
+                return Ok(obj);
+            }
+            else
+            {
+                return NotFound(new { message = "Not found" });
+            }
+             
         }
 
         [HttpPost("society/approve")]
-        public async Task<IActionResult> SocietyApprove(Guid SocietyId, [FromBody] SocietyApprovalDto model)
+        public async Task<IActionResult> SocietyApprove([FromBody] SocietyApprovalDto model)
         {
             var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-
-            var society = await _context.Society.FindAsync(SocietyId);
+            var society = await _context.Society.FindAsync(model.SocietyId);
             if (society == null || society.IsDeleted == true)
-                return NotFound();
+                return NotFound(new { message = "Not found" });
 
             if (society.IsApproved == true)
-                return NotFound("Already Approved");
+                return NotFound(new { message = "Already Approved" });
 
             society.IsApproved = model.IsApproved;
             society.ApprovedBy = currentUserId;
@@ -264,7 +275,19 @@ namespace Call2Owner.Controllers
             society.ApprovedOn = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(_mapper.Map<SocietyDto>(society));
+
+            var obj = _mapper.Map<UpdateSocietyDto>(society);
+
+            if (obj != null)
+            {
+                obj.SocietyDocument = JsonConvert.DeserializeObject<SocietyUploadSelectedRecord>(obj.DetailJson);
+                return Ok(obj);
+            }
+            else
+            {
+                return NotFound(new { message = "Not found" });
+            }
+
         }
 
         private string GenerateJwtToken(User user, string modulePermissions)

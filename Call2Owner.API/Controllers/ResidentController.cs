@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
+using Azure;
 using Call2Owner.DTO;
 using Call2Owner.Models;
 using Call2Owner.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,6 +14,8 @@ using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using RestSharp;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Net.Mime;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,6 +23,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Utilities;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using Microsoft.Net.Http.Headers;
 
 namespace Call2Owner.Controllers
 {
@@ -327,231 +332,315 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyFlatDTO>>(societyBuildingFlats));
         }
 
-        [HttpGet("resident-types")]
-        public async Task<IActionResult> GetResidentTypes(int EntityTypeId)
+        [HttpGet("get-all-resident-types")]
+        public async Task<IActionResult> GetAllResidentTypes(int EntityTypeId)
         {
             var result = await _context.EntityTypeDetail
        .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == EntityTypeId)
        .OrderBy(d => d.Id)
-       .GroupBy(d => new
-       {
-           d.EntityType.Id,
-           d.EntityType.Name,
-           d.EntityType.Label
-       })
-       .Select(group => new
-       {
-           id = group.Key.Id,
-           name = group.Key.Name,
-           label = group.Key.Label,
-           details = group.Select(d => new
-           {
-               entityTypeDetailId = d.Id,
-               entityTypeId = d.EntityTypeId,
-               value = d.Value,
-               label = d.Label
-           }).ToList()
-       })
        .ToListAsync();
 
-            return Ok(result);
-        }
+            // result is assumed to be a collection of dynamic or database rows
+            List<EntityTypeDetail> entityTypeDetails = new List<EntityTypeDetail>();
 
-        [HttpGet("resident-type-form-fields")]
-        public async Task<IActionResult> GetResidentTypeFormFields(int EntityTypeDetailId)
-        {
-            var jsonString = await _context.EntityTypeDetail
-       .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == EntityTypeDetailId)
-       .Select(d => d.DetailJson)
-       .FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(jsonString))
-                return NotFound();
-
-            try
+            if (result.Count > 0)
             {
-                // Deserialize JSON to List<FormField>
-                var options = new JsonSerializerOptions
+
+                foreach (var row in result)
                 {
-                    PropertyNameCaseInsensitive = true,
-                };
+                    var entity = new EntityTypeDetail
+                    {
+                        Id = row.Id,
+                        EntityTypeId = row.EntityTypeId,
+                        Value = row.Value,
+                        Label = row.Label,
+                        DetailJson = JsonConvert.DeserializeObject<List<DetailItem>>(row.DetailJson.ToString()),
+                        IsDafault = row.IsDafault,
+                        IsActive = row.IsActive,
+                        CreatedBy = row.CreatedBy,
+                        CreatedOn = row.CreatedOn,
+                        UpdatedBy = row.UpdatedBy,
+                        UpdatedOn = row.UpdatedOn,
+                        IsDeleted = row.IsDeleted,
+                        DeletedBy = row.DeletedBy,
+                        DeletedOn = row.DeletedOn
+                    };
 
-                //   var formFields = System.Text.Json.JsonSerializer.Deserialize<List<FormField>>(jsonString, options);
-                List<ResidentDocument> documents = System.Text.Json.JsonSerializer.Deserialize<List<ResidentDocument>>(jsonString);
-
-
-                return Ok(documents);
-            }
-            catch (System.Text.Json.JsonException)
-            {
-                return BadRequest("Invalid JSON format.");
-            }
-        }
-
-
-    //    [AllowAnonymous]
-        [HttpPost("resident-update-form-fields")]
-        public async Task<IActionResult> GetResidentTypeFormFields(ResidentUpdateFormFields obj)
-        {
-            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            string extensionWithoutDot = null;
-            int ResidentType_EntityTypeId = 3;
-            if (obj.File != null)
-            {
-
-                 extensionWithoutDot = Path.GetExtension(obj.File.FileName)?.TrimStart('.');
-            }
-
-            var targetType = extensionWithoutDot;
-
-            var getAllEntityTypeDetailByEntityTypeId = await _context.EntityTypeDetail
-       .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == ResidentType_EntityTypeId && d.Id == obj.EntityTypeDetailId)
-       .FirstOrDefaultAsync();
-
-            if (getAllEntityTypeDetailByEntityTypeId !=null)
-            {
-                    // nothing to do
+                    entityTypeDetails.Add(entity);
+                }
             }
             else
             {
-                return NotFound();
+                entityTypeDetails = null;
             }
 
-                var jsonString = await _context.EntityTypeDetail
-           .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == obj.EntityTypeDetailId)
-           .FirstOrDefaultAsync();
+            if (entityTypeDetails == null)
+            {
+                return NotFound("No Resident Type found, contact administation.");
+            }
+                return Ok(entityTypeDetails);
+        }
 
-            if (string.IsNullOrEmpty(jsonString.DetailJson))
-                return NotFound();
-
+        [HttpPost("update-resident-selected-type")]
+        public async Task<IActionResult> UpdateResidentSelectedType([FromForm] SelectedRecord obj)
+        {
             try
             {
-                var options = new JsonSerializerOptions
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var mismatchMessages = new List<MismatchOutput>();
+
+                bool IsFileRequired = false;
+
+                var result = await _context.EntityTypeDetail
+      .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == obj.entityTypeId)
+      .OrderBy(d => d.Id)
+      .ToListAsync();
+
+            // result is assumed to be a collection of dynamic or database rows
+            List<EntityTypeDetail> entityTypeDetails = new List<EntityTypeDetail>();
+
+            if (result.Count > 0)
+            {
+
+                foreach (var row in result)
                 {
-                    PropertyNameCaseInsensitive = true,
-                };
-
-                List<ResidentDocument>? documents = System.Text.Json.JsonSerializer.Deserialize<List<ResidentDocument>>(jsonString.DetailJson, options);
-                bool IsFileUploadRequired = false;
-
-                if (documents != null)
-                {
-      
-
-
-                    var IsType = documents
-                        .Where(doc => doc.Details != null && doc.Details.Any(detail =>
-                            detail.Type != null))
-                        .ToList();
-
-                    if (IsType.Count > 0)
+                    var entity = new EntityTypeDetail
                     {
-                        
-                        //var matchingDocuments = documents
-                        //    .Where(doc => doc.Details != null && doc.Details.Any(detail =>
-                        //        detail.Type.Any(t => string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase))
-                        //    ))
-                        //    .ToList();
+                        Id = row.Id,
+                        EntityTypeId = row.EntityTypeId,
+                        Value = row.Value,
+                        Label = row.Label,
+                        DetailJson = JsonConvert.DeserializeObject<List<DetailItem>>(row.DetailJson.ToString()),
+                        IsDafault = row.IsDafault,
+                        IsActive = row.IsActive,
+                        CreatedBy = row.CreatedBy,
+                        CreatedOn = row.CreatedOn,
+                        UpdatedBy = row.UpdatedBy,
+                        UpdatedOn = row.UpdatedOn,
+                        IsDeleted = row.IsDeleted,
+                        DeletedBy = row.DeletedBy,
+                        DeletedOn = row.DeletedOn
+                    };
 
-                        var matchingDocuments = documents
-    .Where(doc => doc.Details != null && doc.Details.Any(detail =>
-        detail.Type != null && detail.Type.Any(t =>
-            string.Equals(t, targetType, StringComparison.OrdinalIgnoreCase)
-        )
-    ))
-    .ToList();
+                    entityTypeDetails.Add(entity);
+                }
+            }
+            else
+            {
+                entityTypeDetails = null;
+            }
 
-                        if (IsType.Count > 0 && matchingDocuments.Count == 0)
+            if (entityTypeDetails == null)
+            {
+                return NotFound("No Resident Type found, contact administation.");
+            }
+
+           var fullResponse = entityTypeDetails;
+           var selectedRecords = obj;
+
+            //Compare 
+            List<MismatchReport> mismatchedResults = new();
+
+                string extensionFromFile = null;
+                string extensionFromFileName = null;
+
+                if (selectedRecords.file is not null)
+                {
+                    extensionFromFile = Path.GetExtension(ContentDispositionHeaderValue.Parse(selectedRecords.file.ContentDisposition)
+                                        .FileName.ToString().Trim('"'))?.TrimStart('.');
+                }
+
+                if (!string.IsNullOrWhiteSpace(selectedRecords.fileName))
+                {
+                extensionFromFileName = Path.GetExtension(selectedRecords.fileName)?.TrimStart('.');
+                }
+                
+
+
+                bool matchingDetail = fullResponse.Any(entity =>
+                                 entity.DetailJson.Any(detailItem =>
+                                     detailItem.Details.Any(detail =>
+                                         detail.fieldText == selectedRecords.fieldText &&
+                                         detail.fieldId == selectedRecords.fieldId &&
+                                         detail.fieldName == selectedRecords.fieldName &&
+                                         detail.recordType == selectedRecords.recordType &&
+                                         (
+                                             (detail.type == null && selectedRecords.type == null) ||
+                                             (detail.type != null && selectedRecords.type != null &&
+                                              detail.type.Contains(selectedRecords.type) &&
+                                              detail.type.Contains(extensionFromFile) &&
+                                              detail.type.Contains(extensionFromFileName)) // ✅ works now
+                                         )
+                                     )
+                                 )
+                                );
+
+                // Try to find a "close" match by same fieldId or fieldText for better reporting
+                var possible = fullResponse
+                    .SelectMany(e => e.DetailJson)
+                    .SelectMany(d => d.Details)
+                    .FirstOrDefault(d => d.fieldId == selectedRecords.fieldId); // or .fieldText
+
+                if (matchingDetail == false)
+                    {
+                     
+
+                        var report = new MismatchReport
                         {
-                            return NotFound();
-                        }
+                            Input = selectedRecords,
+                            Mismatches = new Dictionary<string, (object?, object?)>()
+                        };
 
-                        if (matchingDocuments.Count > 0 )
+                        if (possible != null)
                         {
-                            //noting to do
-                            IsFileUploadRequired = true;
+                            if (possible.fieldText != selectedRecords.fieldText)
+                                report.Mismatches["fieldText"] = (selectedRecords.fieldText, possible.fieldText);
+
+                            if (possible.fieldId != selectedRecords.fieldId)
+                                report.Mismatches["fieldId"] = (selectedRecords.fieldId, possible.fieldId);
+
+                            if (possible.fieldName != selectedRecords.fieldName)
+                                report.Mismatches["fieldName"] = (selectedRecords.fieldName, possible.fieldName);
+
+                            if (possible.recordType != selectedRecords.recordType)
+                                report.Mismatches["recordType"] = (selectedRecords.recordType, possible.recordType);
+
+                            // Assuming selected.type is string and possible.type is List<string>
+                            if (possible.type !=null)
+                            {
+                            IsFileRequired = true;
+
+                                if (possible.type == null || !possible.type.Contains(selectedRecords.type))
+                                    report.Mismatches["type"] = (selectedRecords.type, possible.type);
+                                 
+                                if (string.IsNullOrWhiteSpace(selectedRecords.fileName))
+                                    report.Mismatches["fileName"] = (selectedRecords.fileName, "File Name required");
+                                else if (!possible.type.Contains(extensionFromFileName))
+                                    report.Mismatches["fileName"] = (extensionFromFileName, possible.type);
+
+                            if (selectedRecords.file is null)
+                                    report.Mismatches["file"] = (extensionFromFile, "Upload doc/image");
+                                        
+                                if (selectedRecords.file != null)
+                                {
+                                        if (!possible.type.Contains(extensionFromFile))
+                                        {
+                                             report.Mismatches["file"] = (extensionFromFile, possible.type);
+                                        }
+
+                                }
+
+                                     
+                                 
+                            }
+                         
                         }
                         else
                         {
-                            return NotFound();
+                            // No match found at all
+                            report.Mismatches["match"] = ("Expected match", "Not found");
                         }
 
-                    }
-                    else
-                    {
-                        // nothing to do
+                        mismatchedResults.Add(report);
+
+
+
+                   //     var response = new List<MismatchOutput>();
+
+                        foreach (var mismatch in mismatchedResults)
+                        {
+                            var output = new MismatchOutput
+                            {
+                                Message = "Mismatch for selected input",
+                                Input = mismatch.Input,
+                                Mismatches = mismatch.Mismatches.Select(kvp => new MismatchDetail
+                                {
+                                    key = kvp.Key,
+                                    value = kvp.Value.InputValue,
+                                    requiredValue = kvp.Value.FoundValue
+                                }).ToList()
+                            };
+
+                            mismatchMessages.Add(output);
+                        }
+
+                        return NotFound(mismatchMessages);
+
+                        // Return all mismatch messages as response
+
 
                     }
 
-
-                }
-                else
+                    // Valid Values 
+                if (mismatchMessages.Count == 0)
                 {
-                    return BadRequest();
-                }
+                    var blobName = "";
 
-                var blobName = "";
-                if (IsFileUploadRequired == true)
-                {
-
-                    // Upload file
-                    if (obj.File is not null)
+                bool IsFileReqiured  =  possible.type.Contains(selectedRecords.type);
+                    if (IsFileReqiured == true)
                     {
-                        blobName = await UploadFileOrImageFolderAsync(obj.File.FileName, obj.File.OpenReadStream());
+                        // Upload file
+                        if (obj.file is not null)
+                        {
+                            blobName = await UploadFileOrImageFolderAsync(selectedRecords.file.FileName, selectedRecords.file.OpenReadStream());
+                        }
+                        else
+                        {
+                            blobName = null;
+                        }
                     }
                     else
                     {
                         blobName = null;
                     }
+
+                    var selected = new UploadSelectedRecord
+                    {
+                        entityTypeId = selectedRecords.entityTypeId,
+                        fieldText = selectedRecords.fieldText,
+                        fieldId = selectedRecords.fieldId,
+                        fieldName = selectedRecords.fieldName,
+                        recordType = selectedRecords.recordType,
+                        type = selectedRecords.type,
+                        fileName = selectedRecords.fieldName,
+                        file = blobName
+                    };
+
+                    string json = JsonConvert.SerializeObject(selected, Formatting.Indented);
+
+                    UpdateResident updateResident = new UpdateResident();
+
+                        updateResident.Id = Guid.Parse(currentUserId);
+                        updateResident.UpdatedOn = DateTime.UtcNow;
+                        updateResident.UpdatedBy = currentUserId;
+                    updateResident.DetailJson = json;
+
+
+                    var returnResult = await UpdateResidentDocumentUploadedAsync(updateResident);
+
+
+                    if (returnResult != null)
+                    {
+                        returnResult.ResidentType = JsonConvert.DeserializeObject<UploadSelectedRecord>(returnResult.DetailJson);
+                        return Ok(returnResult);
+                    }
+                    else
+                    {
+                        return NotFound(new { Message = "Unable to update Resident Type" });
+                    }
+                  
                 }
                 else
                 {
-                    blobName = null;
-                }
-                    Guid Id = Guid.NewGuid();
 
-                Guid residentDocumentId = documents
-                                            .Where(doc => doc.ResidentDocumentRequiredToRegisterId != null)
-                                            .Select(doc => doc.ResidentDocumentRequiredToRegisterId)
-                                            .FirstOrDefault();
-
-                Guid parsedResidentId;
-                if (!Guid.TryParse(currentUserId, out parsedResidentId))
-                {
-                    parsedResidentId = Guid.NewGuid(); // fallback
+                    return NotFound(mismatchMessages);
                 }
 
-                var residentDocumentUploaded = new ResidentDocumentUploaded()
-                {
-                    Id = Id,
-                    ResidentId = parsedResidentId,
-                  //  ResidentDocumentRequiredToRegisterId = residentDocumentId,
-                    Name = obj.Name,
-                  //  Url = blobName,
-                    IsActive = true,
-                    CreatedBy = currentUserId,
-                    CreatedOn = DateTime.UtcNow,
-                    IsDeleted = false
-                };
-
-                var userDetal = await AddResidentDocumentUploadedAsync(obj.EntityTypeDetailId, obj.SocietyFlatId, residentDocumentUploaded);
-
-                if (userDetal == null)
-                {
-                    return Ok("Invalid or expired token");
-                }
-                else
-                {
-
-                    return Ok(userDetal);
-                }
-
-                return Ok(documents);
             }
             catch (System.Text.Json.JsonException)
             {
-                return BadRequest("Invalid JSON format.");
+                return BadRequest();
             }
         }
 
@@ -707,6 +796,36 @@ namespace Call2Owner.Controllers
             }
         }
 
+        private async Task<UpdateResidentDto?> UpdateResidentDocumentUploadedAsync(UpdateResident updateResident)
+        {
+            // Check if a record already exists
+            var userExists = await _context.Resident.FirstOrDefaultAsync(x =>
+                                    x.UserId == updateResident.Id && x.IsDeleted != true
+                                    && x.IsActive == true && x.IsDocumentUploaded == false && x.IsApproved == false);
+
+            if (userExists != null)
+            {
+                userExists.UpdatedBy = updateResident.UpdatedBy;
+                userExists.UpdatedOn = updateResident.UpdatedOn;
+                userExists.DetailJson = updateResident.DetailJson;
+                userExists.IsDocumentUploaded = true;
+
+                 _context.Resident.Update(userExists);
+
+                // Save changes to the database
+                await _context.SaveChangesAsync();
+
+                var residentResponseDTO = _mapper.Map<UpdateResidentDto>(userExists);
+
+                return residentResponseDTO;
+            }
+            else
+            {
+                // Return null if the record exists
+                return null;
+            }
+        }
+
     }
 
     public class FormField
@@ -745,15 +864,133 @@ namespace Call2Owner.Controllers
         [JsonPropertyName("Details")]
         public List<FormField>? Details { get; set; }
     }
-
     public class ResidentUpdateFormFields {
         public int EntityTypeId { get; set; }
         public int EntityTypeDetailId { get; set; }
         public Guid SocietyFlatId { get; set; }
         public string Name { get; set; }
-        public string? FileOrImage { get; set; }
+        public string? FileName { get; set; }
         // public string? Address { get; set; }
         public IFormFile? File { get; set; }
     }
+    public class JsonDetail
+    {
+        public string fieldText { get; set; }
+        public string fieldType { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public bool required { get; set; }
+        public bool isActive { get; set; }
+        public bool isInputControl { get; set; }
+        public string recordType { get; set; }
+        public List<string> type { get; set; } // Optional, for "file" type fields
+    }
+    public class DetailItem
+    {
+        public bool IsDocumentRequired { get; set; }
+        public List<JsonDetail> Details { get; set; }
+    }
+    public class EntityTypeDetail
+    {
+        public int Id { get; set; }
+        public int EntityTypeId { get; set; }
+        public string Value { get; set; }
+        public string Label { get; set; }
+        public List<DetailItem> DetailJson { get; set; }
+        public bool? IsDafault { get; set; }
+        public bool IsActive { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public string? UpdatedBy { get; set; }
+        public DateTime? UpdatedOn { get; set; }
+        public bool? IsDeleted { get; set; }
+        public string? DeletedBy { get; set; }
+        public DateTime? DeletedOn { get; set; }
+    }
 
+    public class SelectedRecord
+    {
+        public int entityTypeId { get; set; }
+        public string fieldText { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public string recordType { get; set; }
+        public string? type { get; set; }
+        public string? fileName { get; set; }
+        public IFormFile? file { get; set; }
+    }
+
+  
+    public class UploadSelectedRecord
+    {
+        public int entityTypeId { get; set; }
+        public string fieldText { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public string recordType { get; set; }
+        public string? type { get; set; }
+        public string? fileName { get; set; }
+        public string? file { get; set; }
+    }
+
+    public class SocietySelectedRecord
+    {
+        public Guid societyId { get; set; }
+        public int entityTypeId { get; set; }
+        public string fieldText { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public string recordType { get; set; }
+        public string? type { get; set; }
+        public string? fileName { get; set; }
+        public IFormFile? file { get; set; }
+    }
+
+    public class SocietyUploadSelectedRecord
+    {
+      //  public Guid societyId { get; set; }
+        public int entityTypeId { get; set; }
+        public string fieldText { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public string recordType { get; set; }
+        public string? type { get; set; }
+        public string? fileName { get; set; }
+        public string? file { get; set; }
+    }
+
+
+    public class MismatchReport
+    {
+        public SelectedRecord Input { get; set; }
+        public Dictionary<string, (object? InputValue, object? FoundValue)> Mismatches { get; set; }
+    }
+
+    public class SocietyMismatchReport
+    {
+        public SocietySelectedRecord Input { get; set; }
+        public Dictionary<string, (object? InputValue, object? FoundValue)> Mismatches { get; set; }
+    }
+
+    public class MismatchOutput
+    {
+        public string Message { get; set; }
+        public object Input { get; set; }
+        public List<MismatchDetail> Mismatches { get; set; }
+    }
+
+    public class MismatchDetail
+    {
+        public string key { get; set; }
+        public object value { get; set; }
+        public object requiredValue { get; set; }
+    }
+
+    public class UpdateResident 
+    {
+                public Guid Id { get; set; }
+                public string UpdatedBy {get; set;}
+                public DateTime UpdatedOn {get; set;}
+                public string DetailJson { get; set; }
+    }
 }

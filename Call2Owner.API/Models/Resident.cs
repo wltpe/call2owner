@@ -39,6 +39,8 @@ public partial class Resident
 
     public DateTime? DeletedOn { get; set; }
 
+    public string? DetailJson {  get; set; }
+
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
     public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploaded { get; set; } = new List<ResidentDocumentUploaded>();

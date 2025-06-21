@@ -58,6 +58,9 @@ public partial class Society
     public string? PinCode { get; set; }
 
     public string? Address { get; set; }
+    public bool? IsDocumentRequired { get; set; }
+    public bool? IsDocumentUploaded { get; set; }
+    public string? DetailJson { get; set; }
 
     public virtual City City { get; set; } = null!;
 

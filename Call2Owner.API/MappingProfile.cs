@@ -37,6 +37,7 @@ namespace Call2Owner
 
             CreateMap<Society, SocietyApprovalDto>().ReverseMap();
             CreateMap<Society, SocietyDto>().ReverseMap();
+            CreateMap<Society, UpdateSocietyDto>().ReverseMap();
 
             CreateMap<SocietyDocumentUploaded, SocietyDocumentUploadedDTO>().ReverseMap();
 
@@ -49,6 +50,8 @@ namespace Call2Owner
 
             CreateMap<Resident, ResidentApprovalDto>().ReverseMap();
             CreateMap<Resident, ResidentDto>().ReverseMap();
+            CreateMap<Resident, CreateResidentDto>().ReverseMap();
+            CreateMap<Resident, UpdateResidentDto>().ReverseMap();
         }
     }
 }
