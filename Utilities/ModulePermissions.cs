@@ -55,5 +55,7 @@ namespace Utilities
         public const string VerifySociety = "207";
         public const string ResendVerificationEmail = "208";
         public const string ForgetEmailPwd = "209";
+        public const string AddAdminUser = "210";
+        public const string AddUser = "211";
     }
 }

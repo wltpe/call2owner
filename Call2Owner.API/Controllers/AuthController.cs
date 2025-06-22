@@ -58,8 +58,8 @@ namespace Call2Owner.Controllers
 
         #region Public Methods
 
-      //  [Authorize(Policy = Utilities.Module.UserManagement)]
-       // [Authorize(Policy = Utilities.Permission.Add)]
+        [Authorize(Policy = Utilities.Module.Society)]
+        [Authorize(Policy = Utilities.Permission.AddUser)]
         [HttpPost("register")]
 
         public async Task<IActionResult> Register([FromBody] UserDto model)
@@ -170,6 +170,8 @@ namespace Call2Owner.Controllers
             return Ok(new { message = "User registered successfully! Check your email to set a password." });
         }
 
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("society/user/register")]
 
         public async Task<IActionResult> SocietyUserRegister([FromBody] SocietyUserDto model)
@@ -211,7 +213,7 @@ namespace Call2Owner.Controllers
             string role = GetUserRoleFromToken();
 
             var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
-            if (!validChildRole && (role != UserRoles.SuperAdmin || role != UserRoles.Admin || role != UserRoles.SocietyAdmin))
+            if (!validChildRole && (role != UserRoles.SuperAdmin || role != UserRoles.Admin))
                 return Forbid("You do not have permission to assign this role.");
 
             var verificationCode = Guid.NewGuid().ToString();
@@ -223,6 +225,17 @@ namespace Call2Owner.Controllers
             string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
 
             Guid Username = Guid.NewGuid();
+
+            bool IsVerified = false;
+            bool IsApproved = false;
+            bool IsDocumentUploaded = false;
+
+            if (model.IsDocumentRequired == true)
+            {
+                IsVerified = true;
+                IsApproved = true;
+                IsDocumentUploaded = true;
+            }
 
             var user = new User
             {
@@ -236,7 +249,7 @@ namespace Call2Owner.Controllers
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
                 IsDeleted = false,
-                IsVerified = false,
+                IsVerified = IsVerified,
                 CreatedBy = currentUserId,
                 CreatedOn = DateTime.UtcNow
                 //     ResetLink = resetLink
@@ -244,6 +257,20 @@ namespace Call2Owner.Controllers
 
             await _context.User.AddAsync(user);
 
+            // Add User as Resident
+            var AddSocietyUser = new SocietyUser
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                SocietyId = model.SocietyId,
+                IsDocumentUploaded = IsDocumentUploaded,
+                IsApproved = IsApproved,
+                IsActive = true,
+                CreatedBy = Username.ToString(),
+                CreatedOn = DateTime.UtcNow
+            };
+
+            await _context.SocietyUser.AddAsync(AddSocietyUser);
 
             await _context.SaveChangesAsync();
 

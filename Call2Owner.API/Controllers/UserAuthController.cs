@@ -77,17 +77,7 @@ namespace Call2Owner.Controllers
 
             if (existingUser != null)
             {
-                // Update OTP for existing user
-                existingUser.Otp = otp;
-                existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
-                existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
-                existingUser.IsActive = true;
-                existingUser.IsVerified = true;
-                existingUser.UpdatedBy = existingUser.Id.ToString();
-                existingUser.UpdatedOn = DateTime.UtcNow;
-
-
-                _context.User.Update(existingUser);
+                return Ok(new { message = "Resident already registered."});
             }
             else
             {
@@ -106,7 +96,7 @@ namespace Call2Owner.Controllers
                     RoleId = Convert.ToInt32(UserRoles.Resident),
                     OtpValidatedOn = null,
                     IsActive = true,
-                    IsVerified = true,
+                    IsVerified = false,
                     CreatedBy=Username.ToString(),
                     CreatedOn=DateTime.UtcNow
                 };
