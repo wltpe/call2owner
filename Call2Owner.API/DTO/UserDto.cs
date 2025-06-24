@@ -28,6 +28,7 @@ namespace Call2Owner.DTO
         public string? Email { get; set; }
         public string? MobileNumber { get; set; }
         public int RoleId { get; set; }
+        public bool IsDocumentRequired { get; set; }
         public Guid? SocietyId { get; set; }
     }
 
