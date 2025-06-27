@@ -38,6 +38,8 @@ public partial class SocietyUser
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+    public bool? IsDocumentRequired { get; set; }
+    public string? DetailJson { get; set; }
 
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 

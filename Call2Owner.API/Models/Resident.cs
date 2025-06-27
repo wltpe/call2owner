@@ -14,6 +14,7 @@ public partial class Resident
     public int? EntityTypeDetailId { get; set; }
 
     public bool IsDocumentUploaded { get; set; }
+    public string ResidentCode { get; set; }
 
     public bool IsApproved { get; set; }
 

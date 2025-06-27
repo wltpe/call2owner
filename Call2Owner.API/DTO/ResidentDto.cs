@@ -1,4 +1,5 @@
 ﻿using Call2Owner.Controllers;
+using Call2Owner.Models;
 
 namespace Call2Owner.DTO
 {
@@ -37,7 +38,6 @@ namespace Call2Owner.DTO
 
 
     }
-
     public class UpdateResidentDto
     {
         public Guid Id { get; set; }
@@ -106,11 +106,217 @@ namespace Call2Owner.DTO
         public string? DetailJson { get; set; }
 
     }
-
     public class ResidentApprovalDto
     {
         public Guid ResidentId { get; set; }
         public bool IsApproved { get; set; }
         public string ApprovedComment { get; set; }
+    }
+    public class ResidentFamilyDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string FamilyType { get; set; } = null!;
+
+        public string? ProfilePicture { get; set; }
+
+        public string Name { get; set; } = null!;
+
+        public string? MobileNumber { get; set; }
+
+        public string? ExitType { get; set; }
+        public string ResidentFamilyCode { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+    public class AddResidentFamilyDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string FamilyType { get; set; } = null!;
+
+        public string? ProfilePicture { get; set; }
+
+        public string Name { get; set; } = null!;
+
+        public string? MobileNumber { get; set; }
+
+        public string? ExitType { get; set; }
+        public string ResidentFamilyCode { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+    public class UpdateResidentFamilyDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string FamilyType { get; set; } = null!;
+
+        public string? ProfilePicture { get; set; }
+
+        public string Name { get; set; } = null!;
+
+        public string? MobileNumber { get; set; }
+
+        public string? ExitType { get; set; }
+        public string ResidentFamilyCode { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+    public class ResidentPetDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string PetType { get; set; } = null!;
+
+        public string PetBreed { get; set; } = null!;
+
+        public string PetName { get; set; } = null!;
+
+        public string? VaccinationType { get; set; } = null!;
+
+        public string? PetPicture { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+    public class AddResidentPetDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string PetType { get; set; } = null!;
+
+        public string PetBreed { get; set; } = null!;
+
+        public string PetName { get; set; } = null!;
+
+        public string? VaccinationType { get; set; } = null!;
+
+        public string? PetPicture { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+
+
+    
+
+    
+
+    }
+    public class UpdateResidentPetDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string PetType { get; set; } = null!;
+
+        public string PetBreed { get; set; } = null!;
+
+        public string PetName { get; set; } = null!;
+
+        public string? VaccinationType { get; set; } = null!;
+
+        public string? PetPicture { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
     }
 }

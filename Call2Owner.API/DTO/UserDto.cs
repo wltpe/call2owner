@@ -23,13 +23,18 @@ namespace Call2Owner.DTO
         public string? FirstName { get; set; }
 
         public string? LastName { get; set; }
+        public string? Email { get; set; }
 
         [Required]
-        public string? Email { get; set; }
         public string? MobileNumber { get; set; }
+        public string? Password { get; set; }
+
+        [Required]
         public int RoleId { get; set; }
         public bool IsDocumentRequired { get; set; }
-        public Guid? SocietyId { get; set; }
+
+        [Required]
+        public Guid SocietyId { get; set; }
     }
 
     public class UserResidentDto
