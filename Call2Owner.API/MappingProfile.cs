@@ -11,29 +11,32 @@ namespace Call2Owner
     {
         public MappingProfile()
         {
-            CreateMap<User, UserDto>();
+            CreateMap<User, UserDto>().ReverseMap();
 
-            CreateMap<Module, ModuleDto>();
-            CreateMap<Models.Permission, PermissionDto>();
-            CreateMap<ModulePermission, ModulePermissionDto>()
-                .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
-                .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.PermissionsJson));
+            CreateMap<Module, ModuleDto>().ReverseMap();
+            CreateMap<Models.Permission, PermissionDto>().ReverseMap();
+            //CreateMap<ModulePermission, ModulePermissionDto>()
+            //    .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
+            //    .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.PermissionsJson)).ReverseMap();
 
             // Mapping from PermissionData to PermissionDataDto
-            CreateMap<PermissionData, PermissionDataDto>();
+            CreateMap<PermissionData, PermissionDataDto>().ReverseMap();
+
+            // Map for ModulePermission <-> ModulePermissionDto
+            CreateMap<ModulePermission, ModulePermissionDto>().ReverseMap();
 
             CreateMap<Role, RoleDto>()
             .ForMember(dest => dest.ParentRoleId, opt => opt.MapFrom(src => src.ParentRoleId))
-            .ForMember(dest => dest.ParentRoleName, opt => opt.MapFrom(src => src.ParentRole != null ? src.ParentRole.RoleName : null));
+            .ForMember(dest => dest.ParentRoleName, opt => opt.MapFrom(src => src.ParentRole != null ? src.ParentRole.RoleName : null)).ReverseMap();
 
-            
+
             CreateMap<Role, RoleDetailDto>().ReverseMap();
-            CreateMap<RoleClaim, RoleClaimDto>();
+            CreateMap<RoleClaim, RoleClaimDto>().ReverseMap();
 
             CreateMap<Role, RoleDetailDto>()
                 .ForMember(dest => dest.ParentRoleId, opt => opt.MapFrom(src => src.ParentRoleId))
                 .ForMember(dest => dest.ParentRoleName, opt => opt.MapFrom(src => src.ParentRole != null ? src.ParentRole.RoleName : null))
-                .ForMember(dest => dest.RoleClaims, opt => opt.MapFrom(src => src.RoleClaim));
+                .ForMember(dest => dest.RoleClaims, opt => opt.MapFrom(src => src.RoleClaim)).ReverseMap();
 
             CreateMap<Society, SocietyApprovalDto>().ReverseMap();
             CreateMap<Society, SocietyDto>().ReverseMap();

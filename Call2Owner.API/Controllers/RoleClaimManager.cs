@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Call2Owner.DTO;
 using Call2Owner.Models;
 using Utilities;
+using Newtonsoft.Json;
 
 namespace Oversight.Controllers
 {
@@ -74,6 +75,8 @@ namespace Oversight.Controllers
                     dto.ModuleName = module.ModuleName;
                 }
 
+                dto.Permissions = JsonConvert.DeserializeObject<List<PermissionDataDto>>(dto.PermissionsJson);
+
                 // Set permission names for each permission in the module
                 foreach (var permissionDto in dto.Permissions)
                 {
@@ -116,13 +119,15 @@ namespace Oversight.Controllers
                     dto.ModuleName = module.ModuleName;
                 }
 
-                // Assign permission names
-                foreach (var perm in dto.Permissions)
+                dto.Permissions = JsonConvert.DeserializeObject<List<PermissionDataDto>>(dto.PermissionsJson);
+
+                // Set permission names for each permission in the module
+                foreach (var permissionDto in dto.Permissions)
                 {
-                    var permission = permissions.FirstOrDefault(p => p.Id == perm.PermissionId);
+                    var permission = permissions.FirstOrDefault(p => p.Id == permissionDto.PermissionId);
                     if (permission != null)
                     {
-                        perm.PermissionName = permission.PermissionName;
+                        permissionDto.PermissionName = permission.PermissionName;
                     }
                 }
             }
@@ -281,6 +286,5 @@ namespace Oversight.Controllers
 
             return Ok(roleDetailDto);
         }
-
     }
 }
