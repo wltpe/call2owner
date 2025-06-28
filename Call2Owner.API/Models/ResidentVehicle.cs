@@ -21,6 +21,8 @@ public partial class ResidentVehicle
 
     public string? Code { get; set; }
 
+    public bool NotifyMeOnEntryExit { get; set; }
+
     public bool IsActive { get; set; }
 
     public string? CreatedBy { get; set; }

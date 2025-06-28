@@ -1645,6 +1645,238 @@ namespace Call2Owner.Controllers
 
         #endregion
 
+        #region VehicleAPIs
+
+        [HttpGet("get-resident-household-vehicle-form")]
+        public async Task<IActionResult> GetResidentHouseholdVehicleForm()
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                Type type = typeof(Utilities.EntityTypeDetail);
+                FieldInfo field = type.GetField("Vehicles", BindingFlags.Public | BindingFlags.Static);
+
+                int EntityTypeDetailValue = 0;
+
+                if (field != null && field.IsLiteral && field.FieldType == typeof(string))
+                {
+                    string value = (string)field.GetRawConstantValue();
+
+                    // Convert to int if needed
+                    if (int.TryParse(value, out int parsedValue))
+                    {
+                        EntityTypeDetailValue = parsedValue;
+                    }
+                }
+
+                var result = await _context.EntityTypeDetail
+                .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == EntityTypeDetailValue)
+                .OrderBy(d => d.Id)
+                .FirstOrDefaultAsync();
+
+
+                if (result != null)
+                {
+
+                   var  FamilyType = JsonConvert.DeserializeObject<List<VehicleFormField>>(result.DetailJson);
+
+                    if (FamilyType != null)
+                    {
+                        return Ok(FamilyType);
+                    }
+                    else
+                    {
+                        return NotFound(new { message = "No Vehicle found." });
+                    }
+
+                }
+                else
+                {
+                    return NotFound(new { message = "No Household found, contact administration." });
+                }
+
+               
+
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = "No Household found, contact administration." });
+            }
+        }
+
+
+        [HttpPost("add-resident-household-vehicle")]
+        public async Task<IActionResult> AddResidentHouseholdVehicle([FromForm] VehicleRequest vehicleData)
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                Type type = typeof(Utilities.EntityType);
+                FieldInfo field = type.GetField("MaximumResidentVehicleAdd", BindingFlags.Public | BindingFlags.Static);
+
+                int EntityTypeDetailValue = 0;
+
+                if (field != null && field.IsLiteral && field.FieldType == typeof(string))
+                {
+                    string value = (string)field.GetRawConstantValue();
+
+                    // Convert to int if needed
+                    if (int.TryParse(value, out int parsedValue))
+                    {
+                        EntityTypeDetailValue = parsedValue;
+                    }
+                }
+
+                var maxResidentVehicleAddLimit = await _context.EntityTypeDetail
+                .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == EntityTypeDetailValue)
+                .ToListAsync();
+
+                if (maxResidentVehicleAddLimit == null)
+                {
+                    return NotFound(new { message = "Maximum Vehicle Add limit not found." });
+                }
+
+                int countAllowed2Wheeler = maxResidentVehicleAddLimit.Count(v => v.Label != null && v.Label.Contains("2 Wheeler"));
+                int countAllowed4Wheeler = maxResidentVehicleAddLimit.Count(v => v.Label != null && v.Label.Contains("4 Wheeler"));
+
+              
+
+                var getResidentIdByUserId = await _context.Resident
+                  .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                  .Select(d => d.Id)
+                  .FirstOrDefaultAsync();
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                var ResidentActiveVehicle = await _context.ResidentVehicle
+                .Where(d => d.IsDeleted != true && d.IsActive == true && d.ResidentId == getResidentIdByUserId)
+                .ToListAsync();
+
+
+                int countActive2Wheeler = ResidentActiveVehicle.Count(v => v.VehicleType != null && v.VehicleType.Contains("2 Wheeler"));
+                int countActive4Wheeler = ResidentActiveVehicle.Count(v => v.VehicleType != null && v.VehicleType.Contains("4 Wheeler"));
+
+                var vehicleType = new[] { "2 Wheeler", "4 Wheeler" };
+                var fuelType = new[] { "Electric", "Petrol", "Diesel", "CNG" };
+
+
+                if (!vehicleType.Contains(vehicleData.VehicleType))
+                {
+                    return NotFound(new { message = "Vehicle Type should be '2 Wheeler' or '4 Wheeler'." });
+                }
+
+
+                if (vehicleData.VehicleType.Contains("2 Wheeler"))
+                {
+                    if (countAllowed2Wheeler <= countActive2Wheeler)
+                    {
+                        return NotFound(new
+                        {
+                            message = $"You can add only '{countAllowed2Wheeler}' 2 Wheelers against your flat as per society rule."
+                        });
+
+                    }
+                }
+                else // 4 Wheeler
+                {
+                    if (countAllowed4Wheeler <= countActive4Wheeler)
+                    {
+                        return NotFound(new { message = $"You can add only '{countAllowed4Wheeler}' 4 Wheelers against your flat as per society rule." });
+                    }
+                }
+
+                if (vehicleData.vehicleFile == null || vehicleData.vehicleFile.Length == 0)
+                {
+                    return BadRequest(new { message = "Vehicle picture is required." });
+                }
+
+                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                    var fileExtension = Path.GetExtension(vehicleData.vehicleFile.FileName).ToLowerInvariant();
+                    const long maxFileSize = 2 * 1024 * 1024; // 2 MB
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        return BadRequest(new { message = "Only .jpg, .jpeg, or .png formats are allowed." });
+                    }
+
+                    if (vehicleData.vehicleFile.Length > maxFileSize)
+                    {
+                        return BadRequest(new { message = "Vehicle picture must not exceed 2 MB." });
+                    }
+
+
+                   
+                if (!fuelType.Contains(vehicleData.FuelType))
+                {
+                    return NotFound(new { message = "Fuel Type should be 'Electric','Petrol','Diesel' or 'CNG'." });
+                }
+
+                var blobName = "";
+
+                    blobName = await ResidentVehicleUploadProfilePictureAsync(vehicleData.vehicleFile.FileName, vehicleData.vehicleFile.OpenReadStream());
+
+                    if (blobName == null)
+                    {
+                        return NotFound(new { message = "Vehicle picture failed to upload, contact administration." });
+                    }
+
+
+                    AddResidentVehicle addResidentVehicle = new AddResidentVehicle();
+
+                    addResidentVehicle.Id = Guid.NewGuid();
+                    addResidentVehicle.ResidentId = getResidentIdByUserId;
+                    addResidentVehicle.VehicleName = vehicleData.VehicleName;
+                    addResidentVehicle.VehicleNumber = vehicleData.VehicleNumber;
+                    addResidentVehicle.VehicleType = vehicleData.VehicleType;
+                    addResidentVehicle.FuelType = vehicleData.FuelType;
+                    addResidentVehicle.RfidTagNumber = vehicleData.RfidTagNumber;
+                    addResidentVehicle.Code = vehicleData.Code;
+                    addResidentVehicle.NotifyMeOnEntryExit = vehicleData.NotifyMeOnEntryExit;
+                    addResidentVehicle.CreatedOn = DateTime.UtcNow;
+                    addResidentVehicle.CreatedBy = currentUserId;
+                    addResidentVehicle.IsActive = true;
+                    addResidentVehicle.IsDeleted = false;
+
+
+                    var returnVehicle = await AddResidentVehicleAsync(addResidentVehicle);
+
+                    if (returnVehicle != null)
+                    {
+
+                        return Ok(returnVehicle);
+                    }
+                    else
+                    {
+                        return NotFound(new { Message = "Unable to Add Vehicle" });
+                    }
+             
+
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest();
+            }
+        }
+
+
+        #endregion
+
         #region CommonMethod
         private string GenerateJwtToken(User user, string modulePermissions)
         {
@@ -1957,6 +2189,72 @@ namespace Call2Owner.Controllers
 
         #endregion
 
+        #region VehicleMethod
+
+        private async Task<string> ResidentVehicleUploadProfilePictureAsync(string blobName, Stream imageStream)
+        {
+            try
+            {
+                // Ensure blobName is sanitized to prevent path traversal attacks
+                if (string.IsNullOrWhiteSpace(blobName))
+                {
+                    throw new ArgumentException("Invalid blob name", nameof(blobName));
+                }
+
+                // Define the IIS folder path
+                string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Images", "Resident", "Vehicle");
+
+                // Ensure the folder exists
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                // Combine the folder path and file name to create the full file path
+                string filePath = Path.Combine(folderPath, blobName);
+
+
+                // Save the file stream to the IIS folder
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    await imageStream.CopyToAsync(fileStream);
+                }
+
+                // Generate the URL to access the uploaded file
+                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+
+                //Local Path
+                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Vehicle/{blobName}";
+
+
+                return fileUrl; // Return the accessible file URL
+            }
+            catch (Exception ex)
+            {
+                // Log and rethrow the exception
+                return null;
+            }
+        }
+
+        private async Task<AddResidentVehicleDto?> AddResidentVehicleAsync(AddResidentVehicle addResidentVehicle)
+        {
+            // Convert input DTO to EF Core entity
+            var residentVehicleEntity = _mapper.Map<ResidentVehicle>(addResidentVehicle);
+
+            // Add to DbContext
+            _context.ResidentVehicle.Add(residentVehicleEntity);
+
+            // Save to DB
+            await _context.SaveChangesAsync();
+
+            // Convert the saved entity to output DTO
+            var residentVehicleResponseDTO = _mapper.Map<AddResidentVehicleDto>(residentVehicleEntity);
+
+            return residentVehicleResponseDTO;
+        }
+
+
+        #endregion
 
     }
 
@@ -2359,6 +2657,74 @@ namespace Call2Owner.Controllers
         public string? DeletedBy { get; set; }
 
         public DateTime? DeletedOn { get; set; }
+
+    }
+
+    #endregion
+
+    #region VehicleModel
+
+    public class VehicleFormField
+    {
+        public string FieldText { get; set; }
+        public string FieldType { get; set; }
+        public string FieldId { get; set; }
+        public string FieldName { get; set; }
+
+        // Use object here to support both string and array (for "type")
+        public object Type { get; set; }
+
+        public bool Required { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsInputControl { get; set; }
+        public string RecordType { get; set; }
+
+        // Nullable int? properties for optional fields
+        public int? MinLength { get; set; }
+        public int? MaxLength { get; set; }
+        public string Pattern { get; set; }
+    }
+    public class VehicleRequest
+    {
+        public string VehicleName { get; set; } = null!;
+
+        public string VehicleNumber { get; set; } = null!;
+
+        public string VehicleType { get; set; } = null!;
+
+        public string FuelType { get; set; } = null!;
+
+        public string? RfidTagNumber { get; set; }
+
+        public string? Code { get; set; }
+
+        public bool NotifyMeOnEntryExit { get; set; }
+        public IFormFile vehicleFile { get; set; }
+
+    }
+    public class AddResidentVehicle
+    {
+        public Guid Id { get; set; }
+        public Guid ResidentId { get; set; }
+        public string VehicleName { get; set; } = null!;
+
+        public string VehicleNumber { get; set; } = null!;
+
+        public string VehicleType { get; set; } = null!;
+
+        public string FuelType { get; set; } = null!;
+
+        public string? RfidTagNumber { get; set; }
+
+        public string? Code { get; set; }
+
+        public bool NotifyMeOnEntryExit { get; set; }
+        public bool IsActive { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public bool? IsDeleted { get; set; }
+
+
 
     }
 
