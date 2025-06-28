@@ -1,17 +1,19 @@
 ﻿using AutoMapper;
+using Call2Owner.DTO;
+//using Call2Owner.Model;
+using Call2Owner.Models;
+using Call2Owner.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using Call2Owner.DTO;
-//using Call2Owner.Model;
-using Call2Owner.Models;
-using Call2Owner.Services;
 using RestSharp;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -196,14 +198,25 @@ namespace Call2Owner.Controllers
             var jwtToken = handler.ReadJwtToken(token);
             var roleId = jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
 
-            if (currentUser.RoleId == Convert.ToInt32(UserRoles.Admin))
+            var email = model.Email.Trim().ToLower();
+            var mobile = model.MobileNumber.Trim();
+
+            if (string.IsNullOrWhiteSpace(email))
             {
-                // Forcefully assign InsurerCustomer role, no need for client to send it
-                model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
+                email = null;
             }
 
-            if (await _context.User.AnyAsync(u => u.Email == model.Email))
-                return BadRequest(new { message = "Email already exists!" });
+            if (email == null)
+            {
+                if (await _context.User.AnyAsync(u =>  u.MobileNumber == mobile))
+                {
+                    return BadRequest(new { message = "Mobile Number or Email already exists!" });
+                }
+            }
+            else if (await _context.User.AnyAsync(u => u.Email.ToLower() == email || u.MobileNumber == mobile))
+            {
+                return BadRequest(new { message = "Mobile Number or Email already exists!" });
+            }
 
 
             // Ensure that the new user cannot have the same role as the current user
@@ -222,19 +235,23 @@ namespace Call2Owner.Controllers
             string encryptedToken = Encrypt(verificationCode);
 
 
-            string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
+            string resetLink = $"https://www.call2owner.com/set-password?{encryptedToken}&&{encryptedEmail}";
 
             Guid Username = Guid.NewGuid();
 
-            bool IsVerified = false;
-            bool IsApproved = false;
-            bool IsDocumentUploaded = false;
+            bool IsVerified = true;
+            bool IsApproved = true;
+            bool IsDocumentRequired = false;
+            string? ApprovedBy = currentUserId;
+            DateTime? ApprovedOn = DateTime.UtcNow;
 
             if (model.IsDocumentRequired == true)
             {
-                IsVerified = true;
-                IsApproved = true;
-                IsDocumentUploaded = true;
+                IsVerified = false;
+                IsApproved = false;
+                ApprovedBy = null;
+                ApprovedOn = null;
+                IsDocumentRequired = true;
             }
 
             var user = new User
@@ -242,8 +259,9 @@ namespace Call2Owner.Controllers
                 Id = Username,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
-                Email = model.Email,
-                MobileNumber = model.MobileNumber,
+                Email = email,
+                MobileNumber = mobile,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
                 RoleId = model.RoleId,
                 VerificationCode = verificationCode,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
@@ -263,8 +281,10 @@ namespace Call2Owner.Controllers
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 SocietyId = model.SocietyId,
-                IsDocumentUploaded = IsDocumentUploaded,
                 IsApproved = IsApproved,
+                ApprovedOn = ApprovedOn,
+                ApprovedBy = ApprovedBy,
+                IsDocumentRequired = IsDocumentRequired,
                 IsActive = true,
                 CreatedBy = Username.ToString(),
                 CreatedOn = DateTime.UtcNow
@@ -273,7 +293,6 @@ namespace Call2Owner.Controllers
             await _context.SocietyUser.AddAsync(AddSocietyUser);
 
             await _context.SaveChangesAsync();
-
 
             if (user.RoleId == Convert.ToInt32(UserRoles.Admin))
             {
@@ -286,26 +305,11 @@ namespace Call2Owner.Controllers
                 };
 
 
-                //var postRequest = new RestRequest("https://localhost:7046/api/Insurer/add-insurer-user", Method.Post);
-                var postRequest = new RestRequest("https://outinsurer.kindlebit.com/api/Insurer/add-insurer-user", Method.Post);
-                postRequest.AddHeader("accept", "application/json");
-                postRequest.AddHeader("Content-Type", "application/json");
-                postRequest.AddHeader("Authorization", $"Bearer {token}");
-
-                // Send the updated/confirmed DTO
-                postRequest.AddJsonBody(insurerToSendDTO);
-
-                var postResponse = await _client.ExecuteAsync(postRequest);
 
             }
 
-            string jsonVariables = JsonConvert.SerializeObject(user);
-            var recipientEmail = Helper.ExtractMatchingValues(jsonVariables);
-            HttpContext.Items["RecipientEmail"] = recipientEmail;
-            HttpContext.Items["VariablesRaw"] = jsonVariables;
-            //await SendVerificationEmail(user.Email, verificationCode);
 
-            return Ok(new { message = "User registered successfully! Check your email to set a password." });
+            return Ok(new { message = "User registered successfully!" });
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]

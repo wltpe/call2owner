@@ -58,4 +58,22 @@ namespace Utilities
         public const string AddAdminUser = "210";
         public const string AddUser = "211";
     }
+
+    public class EntityType 
+    {
+        public const string ResidentType = "3";
+        public const string PetType = "9";
+    }
+
+    public class EntityTypeDetail
+    {
+        public const string Family = "11";
+        public const string Pets = "12";
+        public const string Dog = "19";
+        public const string Cat = "20";
+        public const string Bird = "21";
+        public const string Rabbit = "22";
+        public const string Hamsters = "23";
+        public const string GuineaPig = "24";
+    }
 }

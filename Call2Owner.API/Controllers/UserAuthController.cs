@@ -106,6 +106,7 @@ namespace Call2Owner.Controllers
                 {
                     Id = Guid.NewGuid(),
                     UserId = newUser.Id,
+                    ResidentCode = otp,
                     IsDocumentUploaded = false,
                     IsApproved = false,
                     IsActive = true,
@@ -142,9 +143,8 @@ namespace Call2Owner.Controllers
             string otp = otpGenerator.GenerateOTP();
 
 
-
-            var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber || u.Email == dto.Email);
+              var existingUser = await _context.User.FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
+            
 
             if (existingUser == null)
             {

@@ -52,6 +52,18 @@ namespace Call2Owner
             CreateMap<Resident, ResidentDto>().ReverseMap();
             CreateMap<Resident, CreateResidentDto>().ReverseMap();
             CreateMap<Resident, UpdateResidentDto>().ReverseMap();
+
+            CreateMap<ResidentFamily, AddResidentFamilyDto>().ReverseMap();
+            CreateMap<AddResidentFamily, ResidentFamily>().ReverseMap();
+            CreateMap<ResidentFamily, UpdateResidentFamilyDto>().ReverseMap();
+            CreateMap<UpdateResidentFamily, ResidentFamily>().ReverseMap();
+            CreateMap<ResidentFamily, ResidentFamilyDto>().ReverseMap();
+
+            CreateMap<ResidentPet, AddResidentPetDto>().ReverseMap();
+            CreateMap<AddResidentPet, ResidentPet>().ReverseMap();
+            CreateMap<ResidentPet, UpdateResidentPetDto>().ReverseMap();
+            CreateMap<UpdateResidentPet, ResidentPet>().ReverseMap();
+            CreateMap<ResidentPet, ResidentPetDto>().ReverseMap();
         }
     }
 }
