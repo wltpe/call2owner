@@ -320,7 +320,7 @@ namespace Call2Owner.DTO
 
     }
 
-    public class AddResidentVehicleDto
+    public class ResidentVehicleDto
     {
         public Guid Id { get; set; }
 
@@ -335,6 +335,7 @@ namespace Call2Owner.DTO
         public string FuelType { get; set; } = null!;
 
         public string? RfidTagNumber { get; set; }
+        public string? VehiclePicture { get; set; }
 
         public string? Code { get; set; }
 
@@ -356,11 +357,80 @@ namespace Call2Owner.DTO
 
         public DateTime? DeletedOn { get; set; }
 
+    }
+    public class AddResidentVehicleDto
+    {
+        public Guid Id { get; set; }
 
+        public Guid ResidentId { get; set; }
 
+        public string VehicleName { get; set; } = null!;
 
+        public string VehicleNumber { get; set; } = null!;
 
+        public string VehicleType { get; set; } = null!;
 
+        public string FuelType { get; set; } = null!;
+
+        public string? RfidTagNumber { get; set; }
+        public string? VehiclePicture { get; set; }
+
+        public string? Code { get; set; }
+
+        public bool NotifyMeOnEntryExit { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+
+    public class UpdateResidentVehicleDto
+    {
+        public Guid ResidentId { get; set; }
+
+        public string VehicleName { get; set; } = null!;
+
+        public string VehicleNumber { get; set; } = null!;
+
+        public string VehicleType { get; set; } = null!;
+
+        public string FuelType { get; set; } = null!;
+
+        public string? RfidTagNumber { get; set; }
+        public string? VehiclePicture { get; set; }
+
+        public string? Code { get; set; }
+
+        public bool NotifyMeOnEntryExit { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
 
     }
 }

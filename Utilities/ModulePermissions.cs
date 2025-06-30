@@ -57,6 +57,26 @@ namespace Utilities
         public const string ForgetEmailPwd = "209";
         public const string AddAdminUser = "210";
         public const string AddUser = "211";
+        public const string GetAllCountry = "212";
+        public const string GetAllStateByCountryId = "213";
+        public const string GetAllCityByStateId = "214";
+        public const string GetAllSocietyByCityId = "215";
+        public const string GetAllBuildingBySocietyId = "216";
+        public const string GetAllFlatBySocietyBuildingId = "217";
+        public const string GetAllResidentTypes = "218";
+        public const string UpdateResidentType = "219";
+        public const string GetResidentHouseholdFamilyForm = "220";
+        public const string AddResidentHouseholdFamily = "221";
+        public const string GetAllResidentHouseholdFamily = "222";
+        public const string UpdateResidentHouseholdFamilyById = "223";
+        public const string GetResidentHouseholdPetForm = "224";
+        public const string AddResidentHouseholdPet = "225";
+        public const string GetAllResidentHouseholdPet = "226";
+        public const string UpdateResidentHouseholdPetById = "227";
+        public const string GetResidentHouseholdVehicleForm = "228";
+        public const string AddResidentHouseholdVehicle = "229";
+        public const string GetAllResidentHouseholdVehicle = "230";
+        public const string UpdateResidentHouseholdVehicleById = "231";
     }
 
     public class EntityType 

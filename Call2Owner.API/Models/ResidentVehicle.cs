@@ -23,6 +23,7 @@ public partial class ResidentVehicle
 
     public bool NotifyMeOnEntryExit { get; set; }
 
+    public string? VehiclePicture { get; set; }
     public bool IsActive { get; set; }
 
     public string? CreatedBy { get; set; }

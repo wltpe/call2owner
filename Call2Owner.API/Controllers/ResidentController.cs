@@ -267,7 +267,8 @@ namespace Call2Owner.Controllers
             return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllCountry)]
         [HttpGet("get-all-country")]
         public async Task<ActionResult<IEnumerable<CountryDto>>> GetAllCountry()
         {
@@ -279,7 +280,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CountryDto>>(countries));
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllStateByCountryId)]
         [HttpGet("get-all-state-by-country-id")]
         public async Task<ActionResult<IEnumerable<StateDto>>> GetAllStateByCountryId(int CountryId)
         {
@@ -291,7 +293,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<StateDto>>(states));
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllCityByStateId)]
         [HttpGet("get-all-city-by-state-id")]
         public async Task<ActionResult<IEnumerable<CityDto>>> GetAllCityByStateId(int StateId)
         {
@@ -303,7 +306,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CityDto>>(cities));
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllSocietyByCityId)]
         [HttpGet("get-all-society-by-city-id")]
         public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSocietyByCityId(int CityId)
         {
@@ -315,7 +319,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyDto>>(societies));
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllBuildingBySocietyId)]
         [HttpGet("get-all-building-by-society-id")]
         public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(Guid SocietyId)
         {
@@ -327,7 +332,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyBuildingDTO>>(societyBuildings));
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllFlatBySocietyBuildingId)]
         [HttpGet("get-all-flats-by-society-building-id")]
         public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(Guid SocietyBuildingId)
         {
@@ -339,6 +345,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyFlatDTO>>(societyBuildingFlats));
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllResidentTypes)]
         [HttpGet("get-all-resident-types")]
         public async Task<IActionResult> GetAllResidentTypes(int EntityTypeId)
         {
@@ -388,6 +396,8 @@ namespace Call2Owner.Controllers
                 return Ok(entityTypeDetails);
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.UpdateResidentType)]
         [HttpPost("update-resident-selected-type")]
         public async Task<IActionResult> UpdateResidentSelectedType([FromForm] SelectedRecord obj)
         {
@@ -654,6 +664,8 @@ namespace Call2Owner.Controllers
 
         #region FamilyAPIs
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
         [HttpGet("get-resident-household-family-form")]
         public async Task<IActionResult> GetResidentHouseholdFamilyForm()
         {
@@ -728,6 +740,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
         [HttpPost("add-resident-household-family")]
         public async Task<IActionResult> AddResidentHouseholdFamily([FromForm] AddFamilySelectedRecord obj)
         {
@@ -925,6 +939,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdFamily)]
         [HttpGet("get-all-resident-household-family")]
         public async Task<ActionResult<IEnumerable<ResidentFamilyDto>>> GetAllResidentHouseholdFamily()
         {
@@ -967,6 +983,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdFamilyById)]
         [HttpPost("update-resident-household-family-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdFamilyById([FromForm] UpdateFamilySelectedRecord obj)
         {
@@ -1182,6 +1200,8 @@ namespace Call2Owner.Controllers
 
         #region PetAPIs
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdPetForm)]
         [HttpGet("get-resident-household-pet-form")]
         public async Task<IActionResult> GetResidentHouseholdPetForm()
         {
@@ -1264,6 +1284,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdPet)]
         [HttpPost("add-resident-household-pet")]
         public async Task<IActionResult> AddResidentHouseholdPet([FromForm] PetRequest petDataJson)
         {
@@ -1471,6 +1493,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdPet)]
         [HttpGet("get-all-resident-household-pet")]
         public async Task<ActionResult<IEnumerable<ResidentPetDto>>> GetAllResidentHouseholdPet()
         {
@@ -1513,6 +1537,8 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdPetById)]
         [HttpPost("update-resident-household-pet-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdPetById([FromForm] UpdatePetSelectedRecord obj)
         {
@@ -1647,6 +1673,8 @@ namespace Call2Owner.Controllers
 
         #region VehicleAPIs
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdVehicleForm)]
         [HttpGet("get-resident-household-vehicle-form")]
         public async Task<IActionResult> GetResidentHouseholdVehicleForm()
         {
@@ -1711,7 +1739,8 @@ namespace Call2Owner.Controllers
             }
         }
 
-
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdVehicle)]
         [HttpPost("add-resident-household-vehicle")]
         public async Task<IActionResult> AddResidentHouseholdVehicle([FromForm] VehicleRequest vehicleData)
         {
@@ -1874,6 +1903,165 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        [HttpGet("get-all-resident-household-vehicle")]
+        public async Task<ActionResult<IEnumerable<ResidentVehicleDto>>> GetAllResidentHouseholdVehicle()
+        {
+            try
+            {
+
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                var getResidentByUserId = await _context.Resident
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.UserId == Guid.Parse(currentUserId))
+                    .Select(s => s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (getResidentByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                var residentVehicles = await _context.ResidentVehicle
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.ResidentId == getResidentByUserId)
+                    .OrderByDescending(s => s.CreatedOn)
+                    .ToListAsync();
+
+                if (residentVehicles.Count == 0)
+                {
+                    return Ok(new { message = "No vehicle added." });
+                }
+
+                return Ok(_mapper.Map<List<ResidentVehicleDto>>(residentVehicles));
+
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = "No vehicle added." });
+            }
+        }
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        [HttpPost("update-resident-household-vehicle-by-id")]
+        public async Task<IActionResult> UpdateResidentHouseholdVehicleById([FromForm] UpdateVehicleSelectedRecord obj)
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                var getVehicleById = await _context.ResidentVehicle
+                                    .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == obj.ResidentVehicleId)
+                                    .OrderBy(d => d.Id)
+                                    .FirstOrDefaultAsync();
+
+                if (getVehicleById == null)
+                {
+                    return NotFound(new { message = "Vehicle not found." });
+                }
+
+                string extensionFromFile = null;
+                string extensionFromFileName = null;
+
+
+                UpdateResidentVehicle updateResidentVehicle = new UpdateResidentVehicle();
+
+                var getResidentIdByUserId = await _context.Resident
+                      .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                      .Select(d => d.Id)
+                      .FirstOrDefaultAsync();
+
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+
+                if (obj.file is not null)
+                {
+                    extensionFromFile = Path.GetExtension(ContentDispositionHeaderValue.Parse(obj.file.ContentDisposition)
+                                        .FileName.ToString().Trim('"'))?.TrimStart('.');
+
+
+                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                    var fileExtension = Path.GetExtension(obj.file.FileName).ToLowerInvariant();
+                    const long maxFileSize = 2 * 1024 * 1024; // 2 MB
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        return BadRequest(new { message = "Only .jpg, .jpeg, or .png formats are allowed." });
+                    }
+
+                    if (obj.file.Length > maxFileSize)
+                    {
+                        return BadRequest(new { message = "Vehicle picture must not exceed 2 MB." });
+                    }
+                }
+
+                var blobName = "";
+
+                // Upload file
+                if (obj.file is not null)
+                {
+                    blobName = await ResidentVehicleUploadProfilePictureAsync(obj.file.FileName, obj.file.OpenReadStream());
+                }
+                else
+                {
+                    blobName = getVehicleById.VehiclePicture;
+                }
+
+                updateResidentVehicle.ResidentVehicleId = getVehicleById.Id;
+                updateResidentVehicle.VehicleName = obj.VehicleName;
+                updateResidentVehicle.VehicleNumber = obj.VehicleNumber;
+                updateResidentVehicle.VehiclePicture = blobName;
+                updateResidentVehicle.RfidTagNumber = obj.RfidTagNumber;
+                updateResidentVehicle.Code = obj.Code;
+                updateResidentVehicle.NotifyMeOnEntryExit = obj.NotifyMeOnEntryExit;
+                updateResidentVehicle.IsActive = true;
+                updateResidentVehicle.UpdatedBy = currentUserId;
+                updateResidentVehicle.UpdatedOn = DateTime.UtcNow;
+
+                if (obj.IsDeleted != null && obj.IsDeleted == true)
+                {
+                    updateResidentVehicle.IsDeleted = true;
+                    updateResidentVehicle.DeletedBy = currentUserId;
+                    updateResidentVehicle.DeletedOn = DateTime.UtcNow;
+                    updateResidentVehicle.IsActive = false;
+                }
+
+
+                var returnResult = await UpdateResidentVehicleAsync(updateResidentVehicle);
+
+
+                if (returnResult != null)
+                {
+
+                    return Ok(returnResult);
+                }
+                else
+                {
+                    return NotFound(new { Message = "Unable to update Vehicle" });
+                }
+
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest(new { Message = "Unable to update Vehicle" });
+            }
+        }
 
         #endregion
 
@@ -2251,6 +2439,28 @@ namespace Call2Owner.Controllers
             var residentVehicleResponseDTO = _mapper.Map<AddResidentVehicleDto>(residentVehicleEntity);
 
             return residentVehicleResponseDTO;
+        }
+
+        private async Task<UpdateResidentVehicleDto?> UpdateResidentVehicleAsync(UpdateResidentVehicle updateResidentVehicle)
+        {
+            // Step 1: Get existing record
+            var existingEntity = await _context.ResidentVehicle
+                .FirstOrDefaultAsync(r => r.Id == updateResidentVehicle.ResidentVehicleId);
+
+            if (existingEntity == null)
+            {
+                return null; // Not found
+            }
+
+            // Step 2: Update fields using AutoMapper (or manually)
+            _mapper.Map(updateResidentVehicle, existingEntity);
+
+            // Step 3: Save changes
+            await _context.SaveChangesAsync();
+
+            // Step 4: Map to DTO and return
+            var responseDto = _mapper.Map<UpdateResidentVehicleDto>(existingEntity);
+            return responseDto;
         }
 
 
@@ -2719,6 +2929,7 @@ namespace Call2Owner.Controllers
         public string? Code { get; set; }
 
         public bool NotifyMeOnEntryExit { get; set; }
+        public string? VehiclePicture { get; set; }
         public bool IsActive { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? CreatedOn { get; set; }
@@ -2728,6 +2939,39 @@ namespace Call2Owner.Controllers
 
     }
 
+    public class UpdateVehicleSelectedRecord
+    {
+        public Guid ResidentVehicleId { get; set; }
+        public string? VehicleName { get; set; } = null!;
+        public string? VehicleNumber { get; set; } = null!;
+        public string? RfidTagNumber { get; set; }
+        public string? Code { get; set; }
+        public bool? NotifyMeOnEntryExit { get; set; }
+        public IFormFile? file { get; set; }
+        public bool? IsDeleted { get; set; }
+    }
+
+    public class UpdateResidentVehicle
+    {
+        public Guid ResidentVehicleId { get; set; }
+        public string? VehicleName { get; set; } = null!;
+        public string? VehicleNumber { get; set; } = null!;
+        public string? RfidTagNumber { get; set; }
+        public string? Code { get; set; }
+        public bool? NotifyMeOnEntryExit { get; set; }
+        public string? VehiclePicture { get; set; } = null!;
+        public bool IsActive { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
     #endregion
 
 
