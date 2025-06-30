@@ -60,8 +60,8 @@ namespace Call2Owner.Controllers
 
         #region Public Methods
 
-        [Authorize(Policy = Utilities.Module.Society)]
-        [Authorize(Policy = Utilities.Permission.AddUser)]
+        //[Authorize(Policy = Utilities.Module.Society)]
+        //[Authorize(Policy = Utilities.Permission.AddUser)]
         [HttpPost("register")]
 
         public async Task<IActionResult> Register([FromBody] UserDto model)
@@ -752,25 +752,42 @@ namespace Call2Owner.Controllers
             return Ok(roles);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = Utilities.Module.UserManagement)]
+        [Authorize(Policy = Utilities.Permission.GetAll)]
         [HttpGet("getAllUsers")]
-        public async Task<IActionResult> GetAllUsers()
+        public async Task<IActionResult> GetAllUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var users = await _context.User
+            var usersQuery = _context.User
+                .Include(c => c.Role)
                 .Select(u => new UsersDtoOutput
                 {
+                    userId = u.Id,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     RoleId = u.RoleId,
+                    RoleName = u.Role.RoleName,
                     Email = u.Email,
                     MobileNumber = u.MobileNumber,
                     IsActive = u.IsActive,
                     IsVerified = u.IsVerified
-                })
+                });
+
+            var totalRecords = await usersQuery.CountAsync();
+
+            var users = await usersQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return Ok(users);
+            return Ok(new
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                Data = users
+            });
         }
+
 
         [HttpGet("brokerList")]
         public async Task<IActionResult> BrokerList()

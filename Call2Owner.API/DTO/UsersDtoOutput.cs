@@ -9,6 +9,7 @@
         public string Email { get; set; } = null!;
         public string MobileNumber { get; set; } = null!;
         public int RoleId { get; set; }
+        public string? RoleName { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsVerified { get; set; }
     }
