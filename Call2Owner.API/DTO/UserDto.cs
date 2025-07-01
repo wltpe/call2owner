@@ -10,8 +10,9 @@ namespace Call2Owner.DTO
 
         public string? LastName { get; set; }
 
-        [Required]
         public string? Email { get; set; }
+        public bool? UsePassword { get; set; } = true;
+        [Required]
         public string? MobileNumber { get; set; }
         public int RoleId { get; set; }
     }

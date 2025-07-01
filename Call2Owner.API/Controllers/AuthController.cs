@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using RestSharp;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Security.Claims;
@@ -60,8 +61,8 @@ namespace Call2Owner.Controllers
 
         #region Public Methods
 
-        //[Authorize(Policy = Utilities.Module.Society)]
-        //[Authorize(Policy = Utilities.Permission.AddUser)]
+        [Authorize(Policy = Utilities.Module.Society)]
+        [Authorize(Policy = Utilities.Permission.AddUser)]
         [HttpPost("register")]
 
         public async Task<IActionResult> Register([FromBody] UserDto model)
@@ -93,9 +94,8 @@ namespace Call2Owner.Controllers
                 model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
             }
 
-            if (await _context.User.AnyAsync(u => u.Email == model.Email))
-                return BadRequest(new { message = "Email already exists!" });
-
+            if (await _context.User.AnyAsync(u => u.Email == model.Email || u.MobileNumber == model.MobileNumber))
+                return BadRequest(new { message = "Email / Phone number already exists!" });
 
             // Ensure that the new user cannot have the same role as the current user
             if (currentUser.RoleId == model.RoleId)
@@ -107,15 +107,12 @@ namespace Call2Owner.Controllers
             if (!validChildRole && role != UserRoles.SuperAdmin)
                 return Forbid("You do not have permission to assign this role.");
 
-            var verificationCode = Guid.NewGuid().ToString();
-
-            string encryptedEmail = Encrypt(model.Email);
-            string encryptedToken = Encrypt(verificationCode);
-
-
-            string resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
+            OTPGenerator otpGenerator = new OTPGenerator();
+            string verificationCode = otpGenerator.GenerateOTP();
 
             Guid Username = Guid.NewGuid();
+            var password = "";
+            var message = "";
 
             var user = new User
             {
@@ -132,45 +129,47 @@ namespace Call2Owner.Controllers
                 IsVerified = false,
                 CreatedBy = currentUserId,
                 CreatedOn = DateTime.UtcNow
-           //     ResetLink = resetLink
             };
+
+            if (model.UsePassword.HasValue && model.UsePassword.Value == true)
+            {
+                password = PasswordGenerator.GeneratePassword();
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+                message = $"Your one time password to {password} into C2O is sign-in. Valid for 10 mins.Do not share your OTP with anyone";
+            }
+            else
+            {
+                message = $"Your one time password to {verificationCode} into C2O is sign-in. Valid for 10 mins.Do not share your OTP with anyone";
+            }
 
             await _context.User.AddAsync(user);
             await _context.SaveChangesAsync();
 
-
-            if (user.RoleId == Convert.ToInt32(UserRoles.Admin))
-            {
-                var insurerToSendDTO = new InsurerUserDTO
-                {
-                    UserId = user.Id,
-                    InsurerId = Guid.Parse(currentUserId),
-                    IsActive = user.IsActive ?? false,
-                    IsDeleted = user.IsDeleted ?? false
-                };
-
-
-                //var postRequest = new RestRequest("https://localhost:7046/api/Insurer/add-insurer-user", Method.Post);
-                var postRequest = new RestRequest("https://outinsurer.kindlebit.com/api/Insurer/add-insurer-user", Method.Post);
-                postRequest.AddHeader("accept", "application/json");
-                postRequest.AddHeader("Content-Type", "application/json");
-                postRequest.AddHeader("Authorization", $"Bearer {token}");
-
-                // Send the updated/confirmed DTO
-                postRequest.AddJsonBody(insurerToSendDTO);
-
-                var postResponse = await _client.ExecuteAsync(postRequest);
-
-            }
-
-            string jsonVariables = JsonConvert.SerializeObject(user);
-            var recipientEmail = Helper.ExtractMatchingValues(jsonVariables);
-            HttpContext.Items["RecipientEmail"] = recipientEmail;
-            HttpContext.Items["VariablesRaw"] = jsonVariables;
-            //await SendVerificationEmail(user.Email, verificationCode);
+            await SendOtpAsync(model.MobileNumber, message);
 
             return Ok(new { message = "User registered successfully! Check your email to set a password." });
         }
+
+        private async Task<string> SendOtpAsync(string number, string message)
+        {
+            try
+            {
+                HttpClient client = new HttpClient();
+
+                HttpResponseMessage response = await client.GetAsync(
+                    $"https://sms.shreetripada.com/api/sendapi.php?auth_key=3515HOtE6VZwXu51ewmgrO&mobiles={number}&message={message}&sender=YKPYMT&templateid=1007843886982450229");
+                response.EnsureSuccessStatusCode();
+                string responseBody = await response.Content.ReadAsStringAsync();
+                return responseBody;
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine("\nException Caught!");
+                Console.WriteLine("Message :{0} ", e.Message);
+                return null;
+            }
+        }
+
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
         [Authorize(Policy = Utilities.Permission.Add)]
@@ -1464,4 +1463,51 @@ namespace Call2Owner.Controllers
 
         #endregion
     }
+
+public static class PasswordGenerator
+    {
+        public static string GeneratePassword(int length = 8)
+        {
+            if (length < 3)
+                throw new ArgumentException("Password length must be at least 3 to include digit, special character, and letter.");
+
+            const string digits = "0123456789";
+            const string specialChars = "!@#$%^&*";
+            const string letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const string allChars = digits + specialChars + letters;
+
+            var password = new char[length];
+            var rng = new RNGCryptoServiceProvider();
+            byte[] buffer = new byte[1];
+
+            // Ensure at least one digit, one special character, and one letter
+            password[0] = digits[GetRandomIndex(rng, digits.Length)];
+            password[1] = specialChars[GetRandomIndex(rng, specialChars.Length)];
+            password[2] = letters[GetRandomIndex(rng, letters.Length)];
+
+            // Fill the remaining characters randomly
+            for (int i = 3; i < length; i++)
+            {
+                password[i] = allChars[GetRandomIndex(rng, allChars.Length)];
+            }
+
+            // Shuffle the password so it's not predictable
+            return new string(password.OrderBy(_ => Guid.NewGuid()).ToArray());
+        }
+
+        private static int GetRandomIndex(RandomNumberGenerator rng, int max)
+        {
+            byte[] randomNumber = new byte[4];
+            int value;
+
+            do
+            {
+                rng.GetBytes(randomNumber);
+                value = BitConverter.ToInt32(randomNumber, 0) & int.MaxValue; // Make positive
+            } while (value >= max * (int.MaxValue / max)); // Avoid modulo bias
+
+            return value % max;
+        }
+    }
+
 }
