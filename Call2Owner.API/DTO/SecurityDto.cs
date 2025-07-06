@@ -19,6 +19,7 @@ namespace Call2Owner.DTO
     {
         public int ModuleId { get; set; }
         public string ModuleName { get; set; } = null!;
+        public string PermissionsJson { get; set; } = null!;
         public List<PermissionDataDto> Permissions { get; set; }
     }
 
