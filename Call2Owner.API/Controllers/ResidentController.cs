@@ -17,11 +17,13 @@ using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using RestSharp;
 using Swashbuckle.AspNetCore.Annotations;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Mime;
 using System.Reflection;
+using System.Runtime.InteropServices.JavaScript;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -1873,6 +1875,7 @@ namespace Call2Owner.Controllers
                     addResidentVehicle.VehicleName = vehicleData.VehicleName;
                     addResidentVehicle.VehicleNumber = vehicleData.VehicleNumber;
                     addResidentVehicle.VehicleType = vehicleData.VehicleType;
+                    addResidentVehicle.VehiclePicture = blobName;
                     addResidentVehicle.FuelType = vehicleData.FuelType;
                     addResidentVehicle.RfidTagNumber = vehicleData.RfidTagNumber;
                     addResidentVehicle.Code = vehicleData.Code;
@@ -2062,6 +2065,579 @@ namespace Call2Owner.Controllers
                 return BadRequest(new { Message = "Unable to update Vehicle" });
             }
         }
+
+        #endregion
+
+        #region Frequent GuestsAPIs
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        [HttpGet("get-resident-household-frequent-guests-form")]
+        public async Task<IActionResult> GetResidentHouseholdFrequentGuestsForm()
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                Type type = typeof(Utilities.EntityTypeDetail);
+                FieldInfo field = type.GetField("FrequentGuests", BindingFlags.Public | BindingFlags.Static);
+
+                int entityTypeDetailValue = 0;
+
+                if (field != null && field.IsLiteral && field.FieldType == typeof(string))
+                {
+                    string value = (string)field.GetRawConstantValue();
+                    if (int.TryParse(value, out int parsedValue))
+                    {
+                        entityTypeDetailValue = parsedValue;
+                    }
+                }
+
+                var result = await _context.EntityTypeDetail
+                    .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == entityTypeDetailValue)
+                    .OrderBy(d => d.Id)
+                    .FirstOrDefaultAsync();
+
+                if (result != null)
+                {
+                    var frequentGuestsResponse = JsonConvert.DeserializeObject<GuestVisitForm>(result.DetailJson);
+
+                    if (frequentGuestsResponse != null)
+                    {
+                        return Ok(frequentGuestsResponse);
+                    }
+                    else
+                    {
+                        return NotFound(new { message = "No Frequent Guests data found." });
+                    }
+                }
+                else
+                {
+                    return NotFound(new { message = "No Frequent Guests found, contact administration." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred. Please contact administration.", details = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        [HttpPost("add-resident-household-frequent-guests")]
+        public async Task<IActionResult> AddResidentHouseholdFrequentGuests([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+
+
+                AddResidentFrequentGuests addFrequentGuests = new AddResidentFrequentGuests();
+
+                var getResidentIdByUserId = await _context.Resident
+                      .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                      .Select(d => d.Id)
+                      .FirstOrDefaultAsync();
+
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                string [] GuestType = ["Once", "Frequently"];
+
+                bool isMatchGuestType = GuestType.Any(g => g.StartsWith(obj.GuestType, StringComparison.OrdinalIgnoreCase));
+
+                // common check
+                if (!isMatchGuestType)
+                {
+                    return NotFound(new { message = $"Guest Type not found, please choose any of: {string.Join(", ",GuestType)}'." });
+                }
+
+
+                if (obj.GuestType == "Once")
+                {
+
+                    if (!obj.IsPrivateEntry== true || !obj.IsPrivateEntry == false)
+                        return NotFound(new { message = "Is Private Entry?" });
+                    
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+                    
+
+                    if (!obj.StartingFrom.HasValue)
+                        return NotFound(new { message = "Starting date required." });
+
+                    string[] ValidFor = ["1 Hour","2 Hours","4 Hours","8 Hours","12 Hours","24 Hours"];
+
+                    bool isMatchValidFor = ValidFor.Any(g => g.StartsWith(obj.ValidFor, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchValidFor)
+                        return NotFound(new { message = $"Valid for: {string.Join(", ",ValidFor)}" });
+
+                 
+                    addFrequentGuests.IsPrivateEntry = obj.IsPrivateEntry;
+                    addFrequentGuests.SelectDate = obj.SelectDate;
+                    addFrequentGuests.StartingFrom = obj.StartingFrom;
+                    addFrequentGuests.ValidFor = obj.ValidFor;
+
+                }
+                else if (obj.GuestType == "Frequently")
+                {
+                    string [] AllowEntryForNext = ["1 week","1 month","> 1 month"];
+
+                    bool isMatchAllowEntryForNext = AllowEntryForNext.Any(g => g.StartsWith(obj.AllowEntryForNext, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchAllowEntryForNext)
+                    return NotFound(new { message = $"Match allowed entry for next: {string.Join(", ", AllowEntryForNext)}" });
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+
+                    if (!obj.EndDate.HasValue)
+                        return NotFound(new { message = "End date required." });
+
+                    addFrequentGuests.AllowEntryForNext = obj.AllowEntryForNext;
+                    addFrequentGuests.StartDate = obj.StartDate;
+                    addFrequentGuests.EndDate = obj.EndDate;
+
+                }
+
+
+                OTPGenerator otpGenerator = new OTPGenerator();
+                string otp = otpGenerator.GenerateOTP();
+                addFrequentGuests.UniqueEntryNumber = otp;
+
+                addFrequentGuests.Id = Guid.NewGuid();
+                addFrequentGuests.ResidentId = getResidentIdByUserId;
+                addFrequentGuests.Type = obj.GuestType;
+                addFrequentGuests.GuestName = obj.GuestName;
+                addFrequentGuests.GuestNumber = obj.GuestNumber;
+                addFrequentGuests.Note = obj.Note;
+                addFrequentGuests.IsActive = true;
+                addFrequentGuests.CreatedOn = DateTime.UtcNow;
+                addFrequentGuests.CreatedBy = currentUserId;
+                addFrequentGuests.IsDeleted = false;
+
+                var returnResult = await AddResidentFrequentGuestsAsync(addFrequentGuests);
+
+
+                if (returnResult != null)
+                {
+
+                    return Ok(returnResult);
+                }
+                else
+                {
+                    return NotFound(new { Message = "Unable to Add Frequent Guests" });
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest();
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        [HttpGet("get-all-resident-household-frequent-guests")]
+        public async Task<ActionResult<IEnumerable<ResidentFrequentGuestsDto>>> GetAllResidentHouseholdFrequentGuests()
+        {
+            try
+            {
+
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                var getResidentByUserId = await _context.Resident
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.UserId == Guid.Parse(currentUserId))
+                    .Select(s => s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (getResidentByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                var residentFrequentlyGuests = await _context.ResidentFrequentlyGuest
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.ResidentId == getResidentByUserId)
+                    .OrderByDescending(s => s.CreatedOn)
+                    .ToListAsync();
+
+                if (residentFrequentlyGuests.Count == 0)
+                {
+                    return Ok(new { message = "No frequent guests added." });
+                }
+
+                return Ok(_mapper.Map<List<ResidentFrequentGuestsDto>>(residentFrequentlyGuests));
+
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = "No frequent guest added." });
+            }
+        }
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        [HttpPost("update-resident-household-frequent-guests-by-id")]
+        public async Task<IActionResult> UpdateResidentHouseholdFrequentGuestsById([FromForm] UpdateFrequentlyGuestsSelectedRecord obj)
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+                var getFrequentlyGuestById = await _context.ResidentFrequentlyGuest
+                                    .Where(d => d.IsDeleted != true && d.IsActive == true && d.Id == obj.ResidentFrequentGuestsId)
+                                    .OrderBy(d => d.Id)
+                                    .FirstOrDefaultAsync();
+
+                if (getFrequentlyGuestById == null)
+                {
+                    return NotFound(new { message = "Frequently Guests not found." });
+                }
+
+                UpdateResidentFrequentlyGuests updateResidentFrequentlyGuests = new UpdateResidentFrequentlyGuests();
+
+                var getResidentIdByUserId = await _context.Resident
+                      .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                      .Select(d => d.Id)
+                      .FirstOrDefaultAsync();
+
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                string[] GuestType = ["Once", "Frequently"];
+
+                bool isMatchGuestType = GuestType.Any(g => g.StartsWith(obj.GuestType, StringComparison.OrdinalIgnoreCase));
+
+                // common check
+                if (!isMatchGuestType)
+                {
+                    return NotFound(new { message = $"Guest Type not found, please choose any of: {string.Join(", ", GuestType)}'." });
+                }
+
+
+                if (obj.GuestType == "Once")
+                {
+
+                    if (!obj.IsPrivateEntry == true || !obj.IsPrivateEntry == false)
+                        return NotFound(new { message = "Is Private Entry?" });
+
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+
+
+                    if (!obj.StartingFrom.HasValue)
+                        return NotFound(new { message = "Starting date required." });
+
+                    string[] ValidFor = ["1 Hour", "2 Hours", "4 Hours", "8 Hours", "12 Hours", "24 Hours"];
+
+                    bool isMatchValidFor = ValidFor.Any(g => g.StartsWith(obj.ValidFor, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchValidFor)
+                        return NotFound(new { message = $"Valid for: {string.Join(", ", ValidFor)}" });
+
+
+                    updateResidentFrequentlyGuests.IsPrivateEntry = obj.IsPrivateEntry;
+                    updateResidentFrequentlyGuests.SelectDate = obj.SelectDate;
+                    updateResidentFrequentlyGuests.StartingFrom = obj.StartingFrom;
+                    updateResidentFrequentlyGuests.ValidFor = obj.ValidFor;
+
+                }
+                else if (obj.GuestType == "Frequently")
+                {
+                    string[] AllowEntryForNext = ["1 week", "1 month", "> 1 month"];
+
+                    bool isMatchAllowEntryForNext = AllowEntryForNext.Any(g => g.StartsWith(obj.AllowEntryForNext, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchAllowEntryForNext)
+                        return NotFound(new { message = $"Match allowed entry for next: {string.Join(", ", AllowEntryForNext)}" });
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+
+                    if (!obj.EndDate.HasValue)
+                        return NotFound(new { message = "End date required." });
+
+                    updateResidentFrequentlyGuests.AllowEntryForNext = obj.AllowEntryForNext;
+                    updateResidentFrequentlyGuests.StartDate = obj.StartDate;
+                    updateResidentFrequentlyGuests.EndDate = obj.EndDate;
+
+                }
+
+
+                updateResidentFrequentlyGuests.ResidentFrequentlyGuestsId = getFrequentlyGuestById.Id;
+                updateResidentFrequentlyGuests.Type = obj.GuestType;
+                updateResidentFrequentlyGuests.GuestName = obj.GuestName;
+                updateResidentFrequentlyGuests.GuestNumber = obj.GuestNumber;
+                updateResidentFrequentlyGuests.Note = obj.Note;
+                updateResidentFrequentlyGuests.UniqueEntryNumber = getFrequentlyGuestById.UniqueEntryNumber;
+                updateResidentFrequentlyGuests.IsActive = true;
+                updateResidentFrequentlyGuests.UpdatedBy = currentUserId;
+                updateResidentFrequentlyGuests.UpdatedOn = DateTime.UtcNow;
+
+
+
+                if (obj.IsDeleted != null && obj.IsDeleted == true)
+                {
+                    updateResidentFrequentlyGuests.IsDeleted = true;
+                    updateResidentFrequentlyGuests.DeletedBy = currentUserId;
+                    updateResidentFrequentlyGuests.DeletedOn = DateTime.UtcNow;
+                    updateResidentFrequentlyGuests.IsActive = false;
+                }
+
+
+                var returnResult = await UpdateResidentFrequentGuestsAsync(updateResidentFrequentlyGuests);
+
+
+                if (returnResult != null)
+                {
+
+                    return Ok(returnResult);
+                }
+                else
+                {
+                    return NotFound(new { Message = "Unable to update Frequent Guest" });
+                }
+
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest(new { Message = "Unable to update Vehicle" });
+            }
+        }
+
+        #endregion
+
+        #region Frequent Entries APIs
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        [HttpGet("get-resident-household-frequent-entries-form")]
+        public async Task<IActionResult> GetResidentHouseholdFrequentEntriesForm()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+                if (currentUserId == "0")
+                    return NotFound(new { message = "Invalid or Expired Token." });
+
+                // Step 1: Get the main FrequentEntries ID from static field
+                int entityTypeDetailValue = 0;
+                var field = typeof(Utilities.EntityTypeDetail).GetField("FrequentEntries", BindingFlags.Public | BindingFlags.Static);
+                if (field?.GetRawConstantValue() is string value && int.TryParse(value, out int parsedValue))
+                    entityTypeDetailValue = parsedValue;
+
+                var result = await _context.EntityTypeDetail
+                    .Where(d => d.IsDeleted != true && d.IsActive && d.Id == entityTypeDetailValue)
+                    .FirstOrDefaultAsync();
+
+                if (result == null)
+                    return NotFound(new { message = "EntityTypeDetail not found." });
+
+                // Step 2: Deserialize parent fields and sort in required order
+                var parentFields = JsonConvert.DeserializeObject<List<ParentFieldModel>>(result.DetailJson);
+
+                var orderedFieldIds = new List<string> { "100", "101", "97", "98", "99" };
+                parentFields = parentFields
+                    .Where(p => orderedFieldIds.Contains(p.fieldId))
+                    .OrderBy(p => orderedFieldIds.IndexOf(p.fieldId))
+                    .ToList();
+
+                // Step 3: Load child blocks for each container field
+                var childFieldIds = new List<int> { 97, 98, 99 };
+                var childEntities = await _context.EntityTypeDetail
+                    .Where(d => d.IsDeleted!=true && d.IsActive && childFieldIds.Contains(d.Id))
+                    .ToListAsync();
+
+                var childMap = new Dictionary<string, FieldSet>();
+                foreach (var child in childEntities)
+                {
+                    var fieldSet = JsonConvert.DeserializeObject<FieldSet>(child.DetailJson);
+                    childMap[child.Id.ToString()] = fieldSet;
+                }
+
+                // Step 4: Attach matching child form to each container
+                foreach (var parent in parentFields)
+                {
+                    if (parent.fieldType == "container" && childMap.TryGetValue(parent.fieldId, out var children))
+                    {
+                        parent.childForm = children;
+                    }
+                }
+
+                // Step 5: Return response in required format
+                var response = new EntityTypeDetailResponse
+                {
+                    FrequentEntriesForm = parentFields
+                };
+
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                return NotFound(new { message = "No Household found, contact administration." });
+            }
+        }
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        [HttpPost("add-resident-household-frequent-entries")]
+        public async Task<IActionResult> AddResidentHouseholdFrequentEntries([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
+        {
+            try
+            {
+                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+
+                if (currentUserId == "0")
+                {
+                    return NotFound(new { message = "Invalid or Expired Token." });
+                }
+
+
+
+                AddResidentFrequentGuests addFrequentGuests = new AddResidentFrequentGuests();
+
+                var getResidentIdByUserId = await _context.Resident
+                      .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                      .Select(d => d.Id)
+                      .FirstOrDefaultAsync();
+
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                string[] GuestType = ["Once", "Frequently"];
+
+                bool isMatchGuestType = GuestType.Any(g => g.StartsWith(obj.GuestType, StringComparison.OrdinalIgnoreCase));
+
+                // common check
+                if (!isMatchGuestType)
+                {
+                    return NotFound(new { message = $"Guest Type not found, please choose any of: {string.Join(", ", GuestType)}'." });
+                }
+
+
+                if (obj.GuestType == "Once")
+                {
+
+                    if (!obj.IsPrivateEntry == true || !obj.IsPrivateEntry == false)
+                        return NotFound(new { message = "Is Private Entry?" });
+
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+
+
+                    if (!obj.StartingFrom.HasValue)
+                        return NotFound(new { message = "Starting date required." });
+
+                    string[] ValidFor = ["1 Hour", "2 Hours", "4 Hours", "8 Hours", "12 Hours", "24 Hours"];
+
+                    bool isMatchValidFor = ValidFor.Any(g => g.StartsWith(obj.ValidFor, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchValidFor)
+                        return NotFound(new { message = $"Valid for: {string.Join(", ", ValidFor)}" });
+
+
+                    addFrequentGuests.IsPrivateEntry = obj.IsPrivateEntry;
+                    addFrequentGuests.SelectDate = obj.SelectDate;
+                    addFrequentGuests.StartingFrom = obj.StartingFrom;
+                    addFrequentGuests.ValidFor = obj.ValidFor;
+
+                }
+                else if (obj.GuestType == "Frequently")
+                {
+                    string[] AllowEntryForNext = ["1 week", "1 month", "> 1 month"];
+
+                    bool isMatchAllowEntryForNext = AllowEntryForNext.Any(g => g.StartsWith(obj.AllowEntryForNext, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatchAllowEntryForNext)
+                        return NotFound(new { message = $"Match allowed entry for next: {string.Join(", ", AllowEntryForNext)}" });
+
+                    if (!obj.StartDate.HasValue)
+                        return NotFound(new { message = "Start date required." });
+
+                    if (!obj.EndDate.HasValue)
+                        return NotFound(new { message = "End date required." });
+
+                    addFrequentGuests.AllowEntryForNext = obj.AllowEntryForNext;
+                    addFrequentGuests.StartDate = obj.StartDate;
+                    addFrequentGuests.EndDate = obj.EndDate;
+
+                }
+
+
+                OTPGenerator otpGenerator = new OTPGenerator();
+                string otp = otpGenerator.GenerateOTP();
+                addFrequentGuests.UniqueEntryNumber = otp;
+
+                addFrequentGuests.Id = Guid.NewGuid();
+                addFrequentGuests.ResidentId = getResidentIdByUserId;
+                addFrequentGuests.Type = obj.GuestType;
+                addFrequentGuests.GuestName = obj.GuestName;
+                addFrequentGuests.GuestNumber = obj.GuestNumber;
+                addFrequentGuests.Note = obj.Note;
+                addFrequentGuests.IsActive = true;
+                addFrequentGuests.CreatedOn = DateTime.UtcNow;
+                addFrequentGuests.CreatedBy = currentUserId;
+                addFrequentGuests.IsDeleted = false;
+
+                var returnResult = await AddResidentFrequentGuestsAsync(addFrequentGuests);
+
+
+                if (returnResult != null)
+                {
+
+                    return Ok(returnResult);
+                }
+                else
+                {
+                    return NotFound(new { Message = "Unable to Add Frequent Guests" });
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest();
+            }
+        }
+
 
         #endregion
 
@@ -2466,6 +3042,49 @@ namespace Call2Owner.Controllers
 
         #endregion
 
+        #region FrequentGuestsMethod
+
+        private async Task<AddResidentFrequentGuestsDto?> AddResidentFrequentGuestsAsync(AddResidentFrequentGuests addResidentFrequentGuests)
+        {
+            // Convert input DTO to EF Core entity
+            var residentFrequentGuests = _mapper.Map<ResidentFrequentlyGuest>(addResidentFrequentGuests);
+
+            // Add to DbContext
+            _context.ResidentFrequentlyGuest.Add(residentFrequentGuests);
+
+            // Save to DB
+            await _context.SaveChangesAsync();
+
+            // Convert the saved entity to output DTO
+            var residentFrequentGuestsResponseDTO = _mapper.Map<AddResidentFrequentGuestsDto>(residentFrequentGuests);
+
+            return residentFrequentGuestsResponseDTO;
+        }
+
+        private async Task<UpdateResidentFrequentGuestsDto?> UpdateResidentFrequentGuestsAsync(UpdateResidentFrequentlyGuests updateResidentFrequentlyGuests)
+        {
+            // Step 1: Get existing record
+            var existingEntity = await _context.ResidentFrequentlyGuest
+                .FirstOrDefaultAsync(r => r.Id == updateResidentFrequentlyGuests.ResidentFrequentlyGuestsId);
+
+            if (existingEntity == null)
+            {
+                return null; // Not found
+            }
+
+            // Step 2: Update fields using AutoMapper (or manually)
+            _mapper.Map(updateResidentFrequentlyGuests, existingEntity);
+
+            // Step 3: Save changes
+            await _context.SaveChangesAsync();
+
+            // Step 4: Map to DTO and return
+            var responseDto = _mapper.Map<UpdateResidentFrequentGuestsDto>(existingEntity);
+            return responseDto;
+        }
+
+
+        #endregion
     }
 
     #region CommonModel
@@ -2882,7 +3501,7 @@ namespace Call2Owner.Controllers
         public string FieldName { get; set; }
 
         // Use object here to support both string and array (for "type")
-        public object Type { get; set; }
+        public List<string> Type { get; set; }
 
         public bool Required { get; set; }
         public bool IsActive { get; set; }
@@ -2974,5 +3593,209 @@ namespace Call2Owner.Controllers
     }
     #endregion
 
+    #region FrequentGuestsModel
+
+    public class GuestVisitForm
+    {
+        public List<VisitField> Once { get; set; }
+        public List<VisitField> Frequently { get; set; }
+    }
+
+    public class VisitField
+    {
+        public string FieldText { get; set; }
+        public string FieldType { get; set; }
+        public string FieldId { get; set; }
+        public string FieldName { get; set; }
+        public bool Required { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsInputControl { get; set; }
+        public string RecordType { get; set; }
+
+        public List<string> SelectedItems { get; set; }  // Optional; only for dropdowns
+    }
+
+    public class AddResidentFrequentGuestsSelectedRecord
+    {
+        public string GuestType { get; set; }
+        public bool? IsPrivateEntry { get; set; }
+        public DateOnly? SelectDate { get; set; }
+        public TimeOnly? StartingFrom { get; set; }
+        public string? ValidFor { get; set; }
+        public string? AllowEntryForNext { get; set; }
+        public DateOnly? StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public string GuestName { get; set; }
+        public string GuestNumber { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class AddResidentFrequentGuests
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string Type { get; set; } = null!;
+
+        public bool? IsPrivateEntry { get; set; }
+
+        public DateOnly? SelectDate { get; set; }
+
+        public TimeOnly? StartingFrom { get; set; }
+
+        public string? ValidFor { get; set; }
+
+        public string? AllowEntryForNext { get; set; }
+
+        public DateOnly? StartDate { get; set; }
+
+        public DateOnly? EndDate { get; set; }
+
+        public string? GuestNumber { get; set; }
+
+        public string? GuestName { get; set; }
+
+        public string UniqueEntryNumber { get; set; } = null!;
+
+        public string? Note { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+
+
+
+ 
+
+
+    }
+
+    public class UpdateFrequentlyGuestsSelectedRecord
+    {
+        public Guid ResidentFrequentGuestsId { get; set; }
+        public string GuestType { get; set; }
+        public bool? IsPrivateEntry { get; set; }
+        public DateOnly? SelectDate { get; set; }
+        public TimeOnly? StartingFrom { get; set; }
+        public string? ValidFor { get; set; }
+        public string? AllowEntryForNext { get; set; }
+        public DateOnly? StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public string GuestName { get; set; }
+        public string GuestNumber { get; set; }
+        public string? Note { get; set; }
+        public bool? IsDeleted { get; set; }
+    }
+
+    public class UpdateResidentFrequentlyGuests
+    {
+        public Guid ResidentFrequentlyGuestsId { get; set; }
+        public string Type { get; set; } = null!;
+
+        public bool? IsPrivateEntry { get; set; }
+
+        public DateOnly? SelectDate { get; set; }
+
+        public TimeOnly? StartingFrom { get; set; }
+
+        public string? ValidFor { get; set; }
+
+        public string? AllowEntryForNext { get; set; }
+
+        public DateOnly? StartDate { get; set; }
+
+        public DateOnly? EndDate { get; set; }
+
+        public string? GuestNumber { get; set; }
+
+        public string? GuestName { get; set; }
+
+        public string UniqueEntryNumber { get; set; } = null!;
+
+        public string? Note { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+    }
+
+    #endregion
+
+    #region Frequent Entries Model
+
+    public class EntityTypeDetailResponse
+    {
+        [JsonProperty("FrequentEntriesForm")]
+        public List<ParentFieldModel> FrequentEntriesForm { get; set; }
+    }
+
+    public class ParentFieldModel
+    {
+        public string fieldText { get; set; }
+        public string fieldType { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public bool required { get; set; }
+        public bool isActive { get; set; }
+        public bool isInputControl { get; set; }
+        public string recordType { get; set; }
+        public string iconUrl { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public FieldSet childForm { get; set; }
+    }
+
+    public class FieldSet
+    {
+        public List<ChildFieldModel> once { get; set; }
+        public List<ChildFieldModel> frequently { get; set; }
+    }
+
+    public class ChildFieldModel
+    {
+        public string fieldText { get; set; }
+        public string fieldType { get; set; }
+        public string fieldId { get; set; }
+        public string fieldName { get; set; }
+        public bool required { get; set; }
+        public bool isActive { get; set; }
+        public bool isInputControl { get; set; }
+        public string recordType { get; set; }
+        public string iconUrl { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Include)]
+        public List<string> selectedItems { get; set; }
+    }
+
+    public class AddResidentFrequentEntriesSelectedRecord
+    {
+        public string GuestType { get; set; }
+        public bool? IsPrivateEntry { get; set; }
+        public DateOnly? SelectDate { get; set; }
+        public TimeOnly? StartingFrom { get; set; }
+        public string? ValidFor { get; set; }
+        public string? AllowEntryForNext { get; set; }
+        public DateOnly? StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public string GuestName { get; set; }
+        public string GuestNumber { get; set; }
+        public string? Note { get; set; }
+    }
+
+    #endregion
 
 }

@@ -91,6 +91,11 @@ namespace Utilities
         public const string Family = "11";
         public const string Pets = "12";
         public const string Vehicles = "14";
+        public const string FrequentGuests = "15";
+        public const string FrequentEntries = "16";
+        public const string Cab = "97";
+        public const string Delivery = "98";
+        public const string VisitingHelp = "99";
         public const string Dog = "19";
         public const string Cat = "20";
         public const string Bird = "21";

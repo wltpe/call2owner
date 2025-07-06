@@ -249,7 +249,7 @@ public partial class Call2ownerTestContext : DbContext
 
             entity.HasIndex(e => e.ResidentId, "IX_ResidentFrequentlyEntry_ResidentId");
 
-            entity.HasIndex(e => e.VisitingHelpCategoryCompanyId, "IX_ResidentFrequentlyEntry_VisitingHelpCategoryCompanyId");
+            entity.HasIndex(e => e.VisitingHelpCategoryId, "IX_ResidentFrequentlyEntry_VisitingHelpCategoryId");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.AllowEntryInNext)
@@ -293,9 +293,6 @@ public partial class Call2ownerTestContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ResidentFrequentlyEntry_Resident");
 
-            entity.HasOne(d => d.VisitingHelpCategoryCompany).WithMany(p => p.ResidentFrequentlyEntry)
-                .HasForeignKey(d => d.VisitingHelpCategoryCompanyId)
-                .HasConstraintName("FK_ResidentFrequentlyEntry_VisitingHelpCategoryCompany");
         });
 
         modelBuilder.Entity<ResidentFrequentlyGuest>(entity =>
