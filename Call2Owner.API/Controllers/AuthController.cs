@@ -64,7 +64,6 @@ namespace Call2Owner.Controllers
         [Authorize(Policy = Utilities.Module.Society)]
         [Authorize(Policy = Utilities.Permission.AddUser)]
         [HttpPost("register")]
-
         public async Task<IActionResult> Register([FromBody] UserDto model)
         {
             var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -350,41 +349,33 @@ namespace Call2Owner.Controllers
         [HttpPost("resend-verification-email")]
         public async Task<IActionResult> ResendVerificationEmail([FromBody] ResendEmailRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Email))
+            if (string.IsNullOrWhiteSpace(request.MobileNumber))
                 return BadRequest("Email is required.");
 
             var user = await _context.User
-                .FirstOrDefaultAsync(u => u.Email == request.Email);
+                .FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
 
             if (user == null)
                 return NotFound("User not found.");
 
             if (user.IsVerified == true)
-                return BadRequest("Email is already verified.");
+                return BadRequest("Email / Mobile Number is already verified.");
 
-            var verificationCode = Guid.NewGuid().ToString();
-
-            string encryptedEmail = Encrypt(user.Email);
-            string encryptedToken = Encrypt(verificationCode);
-            var resetLink = $"http://geneinsure.kindlebit.com/set-password?{encryptedToken}&&{encryptedEmail}";
-            string emailBody = $@"
-                <h2>Set Your Password</h2>
-                <p>Click the link below to set your password:</p>
-                <a href='{resetLink}' style='padding:10px 20px; background:#28a745; color:white; text-decoration:none; border-radius:5px;'>Set Password</a>
-                <p>If you didn't request this, ignore this email.</p>";
-
-            //user.ResetLink = resetLink;
+            OTPGenerator otpGenerator = new OTPGenerator();
+            string verificationCode = otpGenerator.GenerateOTP();
 
             user.VerificationCode = verificationCode;
             user.VerificationCodeGenerationTime = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            //await SendVerificationEmail(user.Email, user.VerificationCode);
+            var password = PasswordGenerator.GeneratePassword();
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            var message = $"Your one time password to {password} into C2O is sign-in. Valid for 10 mins.Do not share your OTP with anyone";
 
-            string jsonVariables = JsonConvert.SerializeObject(user);
-            var recipientEmail = Helper.ExtractMatchingValues(jsonVariables);
-            HttpContext.Items["RecipientEmail"] = recipientEmail;
-            HttpContext.Items["VariablesRaw"] = jsonVariables;
+            await _context.User.AddAsync(user);
+            await _context.SaveChangesAsync();
+
+            await SendOtpAsync(request.MobileNumber, message);
 
             return Ok("Verification email has been resent.");
         }
@@ -393,19 +384,13 @@ namespace Call2Owner.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            _logger.LogInformation("This is a test log from Application Insights");
-            _logger.LogError("This is a test log from Application Insights");
-
             var user = await _context.User
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RoleClaim) // Include RoleClaims under Role
-                .FirstOrDefaultAsync(u => u.Email == model.Email);
+                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);
 
             if (user == null || !user.IsActive.GetValueOrDefault() || !user.IsVerified.GetValueOrDefault())
                 return Unauthorized(new { message = "Account is not active or verified. Please reset your password." });
-
-
-            //var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
             if (!BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
                 return Unauthorized(new { message = "Invalid Password!" });
@@ -414,40 +399,12 @@ namespace Call2Owner.Controllers
                                 .OrderBy(rc => rc.Id)
                                 .Select(rc => rc.ModulePermissionsJson.ToString())
                                 .FirstOrDefault();
-            
-
-            //var fixedJson = JsonSerializer.Deserialize<string>(roleClaimValues);  // First deserialization
-            //var modulePermissions = JsonSerializer.Deserialize<List<ModulePermissionData>>(roleClaimValues);  
 
             var token = GenerateJwtToken(user, roleClaimValues);
 
             UserDto userDto = _mapper.Map<UserDto>(user); // Convert to DTOs
 
-            object insurerData = null;
-
-            // Check if user is Insurer
-            if (user.Role?.Id == Convert.ToInt32(UserRoles.Admin))
-            {
-                var request = new RestRequest("https://outinsurer.kindlebit.com/api/Insurer/getAllInsurers", Method.Get);
-                //var request = new RestRequest("https://localhost:7046/api/Insurer/getAllInsurers", Method.Get);
-                request.AddHeader("accept", "*/*");
-                request.AddHeader("Authorization", $"Bearer {token}");
-
-                var response = await _client.ExecuteAsync(request);
-
-                if (response.IsSuccessful && !string.IsNullOrEmpty(response.Content))
-                {
-                    var insurers = System.Text.Json.JsonSerializer.Deserialize<List<InsurerDto>>(response.Content, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                    // Match insurer based on Email or UserID
-                    insurerData = insurers?.FirstOrDefault(i => i.Email == user.Email);
-                }
-            }
-
-            return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
+            return Ok(new { token, role = user.Role?.RoleName, User = userDto });
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
@@ -787,198 +744,6 @@ namespace Call2Owner.Controllers
             });
         }
 
-
-        [HttpGet("brokerList")]
-        public async Task<IActionResult> BrokerList()
-        {
-            var users = await _context.User
-                .Where(u => u.RoleId == Convert.ToInt32(UserRoles.Admin))
-                .Select(u => new UsersDtoOutput
-                {
-                    Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    RoleId = u.RoleId,
-                    Email = u.Email,
-                    MobileNumber = u.MobileNumber,
-                    IsActive = u.IsActive,
-                    IsVerified = u.IsVerified
-                })
-                .ToListAsync();
-
-            return Ok(users);
-        }
-
-        //[HttpGet("brokerById/{brokerId}")]
-        //public async Task<IActionResult> BrokerById(int brokerId)
-        //{
-        //    var users = await _context.Users
-        //        .Where(u => u.Id == brokerId)
-        //        .Select(u => new UsersDtoOutput
-        //        {
-        //            Id = u.Id,
-        //            FirstName = u.FirstName,
-        //            LastName = u.LastName,
-        //            RoleId = u.RoleId,
-        //            Email = u.Email,
-        //            MobileNumber = u.MobileNumber, 
-        //            IsActive = u.IsActive,
-        //            IsVerified = u.IsVerified
-        //        })
-        //        .FirstOrDefaultAsync();
-
-        //    return Ok(users);
-        //}
-
-        //[HttpGet("user-parent-list")]
-        //public async Task<IActionResult> UserParentList()
-        //{
-        //    var usersParentList = await (
-        //        from up in _context.UserParents
-        //        join user in _context.Users on up.UsersId equals user.Id
-        //        join parent in _context.Users on up.ParentId equals parent.Id
-        //        select new
-        //        {
-        //            UserId = up.UserId,
-        //            UserFirstName = user.FirstName,
-        //            UserLastName = user.LastName,
-        //            UserEmail = user.Email,
-
-        //            ParentId = up.ParentId,
-        //            ParentFirstName = parent.FirstName,
-        //            ParentLastName = parent.LastName,
-        //            ParentEmail = parent.Email,
-
-        //            up.IsActive,
-        //            up.IsVerified
-        //        }
-        //    ).ToListAsync();
-
-        //    if (usersParentList == null || !usersParentList.Any())
-        //    {
-        //        return NotFound(new { message = "No user-parent relationships found." });
-        //    }
-
-        //    return Ok(usersParentList);
-        //}
-
-
-        //[HttpPost("assign-parent-to-users")]
-        //public async Task<IActionResult> AssignParentToUsers([FromBody] AssignParentRequestDTO model)
-        //{
-        //    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-        //    if (currentUserId == 0)
-        //        return Unauthorized(new { message = "Invalid user." });
-
-        //    var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
-        //    if (currentUser == null)
-        //        return Unauthorized(new { message = "User not found or unauthorized." });
-        //    // Validate parent
-        //    var parentUser = await _context.User.FindAsync(model.ParentId);
-        //    if (parentUser == null)
-        //    {
-        //        return NotFound(new { message = "Parent user not found." });
-        //    }
-
-        //    var validUserIds = await _context.User
-        //        .Where(u => model.UserIds.Contains(u.Id))
-        //        .Select(u => u.Id)
-        //        .ToListAsync();
-
-        //    var newRelations = new List<UserParent>();
-
-        //    foreach (var userId in validUserIds)
-        //    {
-        //        var exists = await _context.UserParents.AnyAsync(up => up.UserId == userId);
-        //        if (!exists)
-        //        {
-        //            newRelations.Add(new UserParent
-        //            {
-        //                UserId = userId,
-        //                ParentId = model.ParentId,
-        //                CreatedBy = currentUserId,
-        //                IsActive = true,
-        //                IsDeleted = false,
-        //                IsVerified = true
-        //            });
-        //        }
-        //    }
-
-        //    if (!newRelations.Any())
-        //    {
-        //        return Conflict(new { message = "No new user-parent mappings to assign." });
-        //    }
-
-        //    await _context.UserParents.AddRangeAsync(newRelations);
-        //    await _context.SaveChangesAsync();
-
-        //    return Ok(new
-        //    {
-        //        message = "Parent assigned to users successfully.",
-        //        assignedCount = newRelations.Count
-        //    });
-        //}
-
-
-        //[HttpPost("assign-parent-to-users")]
-        //public async Task<IActionResult> AssignParentToUsers([FromBody] AssignParentRequestDTO model)
-        //{
-        //    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-        //    if (currentUserId == 0)
-        //        return Unauthorized(new { message = "Invalid user." });
-
-        //    var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == currentUserId);
-        //    if (currentUser == null)
-        //        return Unauthorized(new { message = "User not found or unauthorized." });
-
-        //    // Validate parent
-        //    var parentUser = await _context.User.FindAsync(model.ParentId);
-        //    if (parentUser == null)
-        //    {
-        //        return NotFound(new { message = "Parent user not found." });
-        //    }
-
-        //    // Get only valid user IDs from the request
-        //    var validUserIds = await _context.User
-        //        .Where(u => model.UserIds.Contains(u.Id))
-        //        .Select(u => u.Id)
-        //        .ToListAsync();
-
-        //    // Remove any existing parent mappings for the users
-        //    var existingRelations = await _context.UserParents
-        //        .Where(up => validUserIds.Contains(up.UserId))
-        //        .ToListAsync();
-
-        //    if (existingRelations.Any())
-        //    {
-        //        _context.UserParents.RemoveRange(existingRelations);
-        //    }
-
-        //    // Create new mappings
-        //    var newRelations = validUserIds.Select(userId => new UserParent
-        //    {
-        //        UserId = userId,
-        //        ParentId = model.ParentId,
-        //        CreatedBy = currentUserId.ToString(),
-        //        IsActive = true,
-        //        IsDeleted = false,
-        //        IsVerified = true
-        //    }).ToList();
-
-        //    await _context.UserParents.AddRangeAsync(newRelations);
-        //    await _context.SaveChangesAsync();
-
-        //    return Ok(new
-        //    {
-        //        message = "Parent assigned to users successfully.",
-        //        assignedUsers = newRelations.Select(x => x.UserId).ToList()
-        //    });
-        //}
-
-
-
         [HttpGet("getAllUsersByRole/{roleId}")]
         public async Task<IActionResult> GetAllUsersByRole(int roleId)
         {
@@ -1031,7 +796,6 @@ namespace Call2Owner.Controllers
 
             return Ok(users);
         }
-
 
         private string GenerateJwtToken(User user, string modulePermissions)
         {
@@ -1163,7 +927,6 @@ namespace Call2Owner.Controllers
             }
         }
 
-
         public static bool IsBase64String(string base64)
         {
             if (string.IsNullOrEmpty(base64) || base64.Length % 4 != 0)
@@ -1216,48 +979,6 @@ namespace Call2Owner.Controllers
             return Ok(rolesList);
         }
 
-
-        //[HttpGet("hierarchy")]
-        //public async Task<IActionResult> GetUserHierarchy()
-        //{
-
-        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier); // Extract user ID from token
-        //    if (userIdClaim == null)
-        //        return Unauthorized(new { message = "Invalid token or user not found." });
-        //    int userId = int.Parse(userIdClaim.Value);
-
-        //    var users = await _context.User.ToListAsync();
-        //    var tree = BuildUserTree(users, userId);
-        //    return Ok(tree);
-        //}
-
-        //[Authorize(Policy = Utilities.Module.UserManagement)]
-        //[Authorize(Policy = Utilities.Permission.GetAll)]
-        //[HttpGet("hierarchy")]
-        //public async Task<IActionResult> GetUserHierarchy()
-        //{
-        //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        //    if (userIdClaim == null)
-        //        return Unauthorized(new { message = "Invalid token or user not found." });
-
-        //    int userId = int.Parse(userIdClaim.Value);
-
-        //    var users = await _context.User.ToListAsync();
-
-        //    // Build full tree from root
-        //    var fullTree = BuildUserTree(users, null);
-
-        //    // Find the subtree under the current user
-        //    var userSubTree = FindUserSubTree(fullTree, userId);
-
-        //    if (userSubTree == null)
-        //        return NotFound(new { message = "User not found in the hierarchy." });
-
-        //    return Ok(userSubTree);
-        //}
-
-        //[Authorize(Policy = Utilities.Module.UserManagement)]
-        //[Authorize(Policy = Utilities.Permission.GetAll)]
         [AllowAnonymous]
         [HttpGet("GetAllClaimUsersByInsurerId")]
         public async Task<IActionResult> GetAllClaimUsersByInsurerId([FromQuery] int insurerid)
@@ -1509,5 +1230,4 @@ public static class PasswordGenerator
             return value % max;
         }
     }
-
 }

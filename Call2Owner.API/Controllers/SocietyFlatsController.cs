@@ -43,6 +43,19 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyFlatDTO>>(flats));
         }
 
+        [HttpGet("building-flat")]
+        public async Task<ActionResult<SocietyFlatDTO>> GetById(Guid societyBuildingId)
+        {
+            var flat = await _context.SocietyFlat
+                .Where(x => x.SocietyBuildingId == societyBuildingId)
+                .ToListAsync();
+
+            if (flat == null)
+                return NotFound();
+
+            return Ok(_mapper.Map<SocietyFlatDTO>(flat));
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<SocietyFlatDTO>> GetById(int id)
         {

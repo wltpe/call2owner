@@ -6,6 +6,6 @@ namespace Call2Owner.DTO
     {
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string MobileNumber { get; set; }
     }
 }

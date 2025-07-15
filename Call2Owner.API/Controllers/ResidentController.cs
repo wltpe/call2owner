@@ -267,8 +267,8 @@ namespace Call2Owner.Controllers
             return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
         }
 
-        [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllCountry)]
+        //[Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Permission.GetAllCountry)]
         [HttpGet("get-all-country")]
         public async Task<ActionResult<IEnumerable<CountryDto>>> GetAllCountry()
         {
@@ -280,8 +280,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CountryDto>>(countries));
         }
 
-        [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllStateByCountryId)]
+        //[Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Permission.GetAllStateByCountryId)]
         [HttpGet("get-all-state-by-country-id")]
         public async Task<ActionResult<IEnumerable<StateDto>>> GetAllStateByCountryId(int CountryId)
         {
@@ -293,8 +293,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<StateDto>>(states));
         }
 
-        [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllCityByStateId)]
+        //[Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Permission.GetAllCityByStateId)]
         [HttpGet("get-all-city-by-state-id")]
         public async Task<ActionResult<IEnumerable<CityDto>>> GetAllCityByStateId(int StateId)
         {
@@ -306,8 +306,8 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CityDto>>(cities));
         }
 
-        [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllSocietyByCityId)]
+        //[Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Permission.GetAllSocietyByCityId)]
         [HttpGet("get-all-society-by-city-id")]
         public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSocietyByCityId(int CityId)
         {

@@ -29,6 +29,16 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<SocietyBuildingDTO>>(entities));
         }
 
+        [HttpGet("society-building")]
+        public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuilding(Guid societyId)
+        {
+            var entities = await _context.SocietyBuilding
+                .Where(x => x.SocietyId == societyId && x.IsDeleted != true)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<List<SocietyBuildingDTO>>(entities));
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<SocietyBuildingDTO>> GetById(int id)
         {
@@ -44,6 +54,8 @@ namespace Call2Owner.Controllers
         {
             var entity = _mapper.Map<SocietyBuilding>(cto);
             entity.CreatedOn = DateTime.UtcNow;
+            entity.CreatedBy = "CreatedBy";
+
             entity.IsActive = true;
 
             _context.SocietyBuilding.Add(entity);
