@@ -576,7 +576,7 @@ namespace Call2Owner.Controllers
             // Check if a record already exists
             var userExists = await _context.Society.FirstOrDefaultAsync(x =>
                                     x.Id == updateSociety.Id && x.IsDeleted != true
-                                    && x.IsActive == true && x.IsDocumentRequired == true && x.IsDocumentUploaded == false && x.IsApproved == false);
+                                    && x.IsActive == true && x.IsDocumentRequired == true && x.IsDocumentUploaded != true && x.IsApproved != true);
 
             if (userExists != null)
             {

@@ -31,7 +31,7 @@ public partial class ResidentFrequentlyEntry
 
     public int? DeliveryCompanyId { get; set; }
 
-    public int? VisitingHelpCategoryCompanyId { get; set; }
+    public int? VisitingHelpCategoryId { get; set; }
 
     public string? DaysOfWeek { get; set; }
 
@@ -56,6 +56,7 @@ public partial class ResidentFrequentlyEntry
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+    public string? VisitingHelpName { get; set; }
 
     public virtual CabCompany? CabCompany { get; set; }
 
@@ -63,5 +64,5 @@ public partial class ResidentFrequentlyEntry
 
     public virtual Resident Resident { get; set; } = null!;
 
-    public virtual VisitingHelpCategoryCompany? VisitingHelpCategoryCompany { get; set; }
+    public virtual VisitingHelpCategory? VisitingHelpCategory { get; set; }
 }
