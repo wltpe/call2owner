@@ -116,6 +116,53 @@ namespace Call2Owner.Controllers;
     }
     #endregion
 
+    #region ModulePermission
+    //[Authorize(Policy = Utilities.Module.UserManagement)]
+    //[Authorize(Policy = Utilities.Permission.GetAll)]
+    //modules/101/permissions
+    [HttpGet("modules/{moduleId}/permissions")]
+    public IActionResult GetModulePermission(int moduleId)
+    {
+        var modules = _context.Module.ToList();
+        var permissions = _context.Permission.ToList();
+
+        var modulePermission = _context.ModulePermission
+            .Where(mp => mp.ModuleId == moduleId)
+            .ToList();
+
+        if (!modulePermission.Any())
+        {
+            return NotFound("Module permissions not found.");
+        }
+
+        var modulePermissionDtos = _mapper.Map<List<ModulePermissionDto>>(modulePermission);
+
+        // Process each modulePermissionDto
+        foreach (var dto in modulePermissionDtos)
+        {
+            // Set module name
+            var module = modules.FirstOrDefault(m => m.ModuleId == dto.ModuleId);
+            if (module != null)
+            {
+                dto.ModuleName = module.ModuleName;
+            }
+
+            dto.Permissions = JsonConvert.DeserializeObject<List<PermissionDataDto>>(dto.PermissionsJson);
+
+            // Set permission names for each permission in the module
+            foreach (var permissionDto in dto.Permissions)
+            {
+                var permission = permissions.FirstOrDefault(p => p.Id == permissionDto.PermissionId);
+                if (permission != null)
+                {
+                    permissionDto.PermissionName = permission.PermissionName;
+                }
+            }
+        }
+
+        return Ok(modulePermissionDtos);
+    }
+    #endregion
 
     #region Permission
 
@@ -190,7 +237,7 @@ namespace Call2Owner.Controllers;
 
     #endregion
 
-    #region Permission
+    #region Roles
     [HttpPost("role")]
     public async Task<IActionResult> CreateRole(RoleDto dto)
     {
@@ -273,6 +320,49 @@ namespace Call2Owner.Controllers;
         return NoContent();
     }
 
+    //[Authorize(Policy = Utilities.Module.UserManagement)]
+    //[Authorize(Policy = Utilities.Permission.GetAll)]
+    [HttpGet("role-claim/{roleId}")]
+    public async Task<IActionResult> GetRoleWithClaims(int roleId)
+    {
+        var role = await _context.Role
+            .Include(r => r.ParentRole)
+            .Include(r => r.RoleClaim)
+            .FirstOrDefaultAsync(r => r.Id == roleId);
+
+        if (role == null)
+            return NotFound("Role not found.");
+
+        //var roleDetailDto = new RoleDetailDto
+        //{
+        //    Id = role.Id,
+        //    RoleName = role.RoleName,
+        //    DisplayName = role.DisplayName,
+        //    ParentRoleId = role.ParentRoleId,
+        //    ParentRoleName = role.ParentRole?.RoleName,
+        //    RoleClaims = role.RoleClaims.Select(rc => new ModulePermissionDto
+        //    {
+        //        ModuleId = rc.ModulePermissions.Select(mp => mp.ModuleId).FirstOrDefault(),
+        //        ModuleName = _context.Modules.Where(m => m.ModuleId == rc.ModulePermissions.Select(mp => mp.ModuleId).FirstOrDefault())
+        //                                     .Select(m => m.ModuleName).FirstOrDefault(),
+        //        Permissions = rc.ModulePermissions.SelectMany(mp => mp.Permissions)
+        //                                          .Select(p => new PermissionDataDto { PermissionId = p.PermissionId })
+        //                                          .ToList()
+        //    }).ToList()
+        //};
+
+        var roleDetailDto = new RoleDetailOutputDto
+        {
+            Id = role.Id,
+            RoleName = role.RoleName,
+            DisplayName = role.DisplayName,
+            ParentRoleId = role.ParentRoleId,
+            ParentRoleName = role.ParentRole?.RoleName,
+            RoleClaims = role.RoleClaim.FirstOrDefault()?.ModulePermissionsJson
+        };
+
+        return Ok(roleDetailDto);
+    }
     #endregion
 
     #region Society

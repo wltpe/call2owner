@@ -44,7 +44,7 @@ namespace Call2Owner.Controllers
         }
 
         [HttpGet("building-flat")]
-        public async Task<ActionResult<SocietyFlatDTO>> GetById(Guid societyBuildingId)
+        public async Task<ActionResult<List<SocietyFlatDTO>>> GetById(Guid societyBuildingId)
         {
             var flat = await _context.SocietyFlat
                 .Where(x => x.SocietyBuildingId == societyBuildingId)
@@ -53,7 +53,7 @@ namespace Call2Owner.Controllers
             if (flat == null)
                 return NotFound();
 
-            return Ok(_mapper.Map<SocietyFlatDTO>(flat));
+            return Ok(_mapper.Map<List<SocietyFlatDTO>>(flat));
         }
 
         [HttpGet("{id}")]

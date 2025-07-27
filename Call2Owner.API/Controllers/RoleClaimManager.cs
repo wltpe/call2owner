@@ -47,7 +47,7 @@ namespace Oversight.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.Add)]
+        [Authorize(Policy = Utilities.Permission.GetAll)]
         [HttpGet("modules/{moduleId}/permissions")]
         public IActionResult GetModulePermission(int moduleId)
         {
@@ -65,32 +65,44 @@ namespace Oversight.Controllers
 
             var modulePermissionDtos = _mapper.Map<List<ModulePermissionDto>>(modulePermission);
 
-            // Process each modulePermissionDto
             foreach (var dto in modulePermissionDtos)
             {
-                // Set module name
+                // Module name
                 var module = modules.FirstOrDefault(m => m.ModuleId == dto.ModuleId);
                 if (module != null)
                 {
                     dto.ModuleName = module.ModuleName;
                 }
 
-                dto.Permissions = JsonConvert.DeserializeObject<List<PermissionDataDto>>(dto.PermissionsJson);
+                // Permissions list
+                dto.Permissions = new List<PermissionDataDto>();
 
-                // Set permission names for each permission in the module
-                foreach (var permissionDto in dto.Permissions)
+                if (!string.IsNullOrEmpty(dto.PermissionsJson))
                 {
-                    var permission = permissions.FirstOrDefault(p => p.Id == permissionDto.PermissionId);
-                    if (permission != null)
+                    try
                     {
-                        permissionDto.PermissionName = permission.PermissionName;
+                        var permissionList = JsonConvert.DeserializeObject<List<PermissionDataDto>>(dto.PermissionsJson);
+
+                        foreach (var permissionDto in permissionList)
+                        {
+                            var perm = permissions.FirstOrDefault(p => p.Id == permissionDto.PermissionId);
+                            if (perm != null)
+                            {
+                                permissionDto.PermissionName = perm.PermissionName;
+                            }
+
+                            dto.Permissions.Add(permissionDto);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing JSON: {ex.Message}");
                     }
                 }
             }
 
             return Ok(modulePermissionDtos);
         }
-
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
         [Authorize(Policy = Utilities.Permission.Add)]

@@ -59,9 +59,18 @@ namespace Call2Owner.Controllers
             var entity = _mapper.Map<SocietyDocumentUploaded>(cto);
             entity.CreatedOn = DateTime.UtcNow;
             entity.IsActive = true;
+            entity.CreatedBy = "DateTime.UtcNow";
 
             _context.SocietyDocumentUploaded.Add(entity);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+            }
 
             var resultDto = _mapper.Map<SocietyDocumentUploadedDTO>(entity);
             return CreatedAtAction(nameof(GetById), new { id = entity.Id }, resultDto);
