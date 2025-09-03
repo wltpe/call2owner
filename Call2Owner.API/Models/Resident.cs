@@ -14,7 +14,8 @@ public partial class Resident
     public int? EntityTypeDetailId { get; set; }
 
     public bool IsDocumentUploaded { get; set; }
-    public string ResidentCode { get; set; }
+
+    public string ResidentCode { get; set; } = null!;
 
     public bool IsApproved { get; set; }
 
@@ -40,21 +41,21 @@ public partial class Resident
 
     public DateTime? DeletedOn { get; set; }
 
-    public string? DetailJson {  get; set; }
+    public string? DetailJson { get; set; }
 
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
-    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploaded { get; set; } = new List<ResidentDocumentUploaded>();
+    public virtual ICollection<ResidentDocumentUploaded> ResidentDocumentUploadeds { get; set; } = new List<ResidentDocumentUploaded>();
 
-    public virtual ICollection<ResidentFamily> ResidentFamily { get; set; } = new List<ResidentFamily>();
+    public virtual ICollection<ResidentFamily> ResidentFamilies { get; set; } = new List<ResidentFamily>();
 
-    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntry { get; set; } = new List<ResidentFrequentlyEntry>();
+    public virtual ICollection<ResidentFrequentlyEntry> ResidentFrequentlyEntries { get; set; } = new List<ResidentFrequentlyEntry>();
 
-    public virtual ICollection<ResidentFrequentlyGuest> ResidentFrequentlyGuest { get; set; } = new List<ResidentFrequentlyGuest>();
+    public virtual ICollection<ResidentFrequentlyGuest> ResidentFrequentlyGuests { get; set; } = new List<ResidentFrequentlyGuest>();
 
-    public virtual ICollection<ResidentPet> ResidentPet { get; set; } = new List<ResidentPet>();
+    public virtual ICollection<ResidentPet> ResidentPets { get; set; } = new List<ResidentPet>();
 
-    public virtual ICollection<ResidentVehicle> ResidentVehicle { get; set; } = new List<ResidentVehicle>();
+    public virtual ICollection<ResidentVehicle> ResidentVehicles { get; set; } = new List<ResidentVehicle>();
 
     public virtual SocietyFlat? SocietyFlat { get; set; }
 

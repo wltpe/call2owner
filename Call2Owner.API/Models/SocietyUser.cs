@@ -38,14 +38,16 @@ public partial class SocietyUser
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
     public bool? IsDocumentRequired { get; set; }
+
     public string? DetailJson { get; set; }
 
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
     public virtual Society? Society { get; set; }
 
-    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploaded { get; set; } = new List<SocietyUserDocumentUploaded>();
+    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
 
     public virtual User User { get; set; } = null!;
 }

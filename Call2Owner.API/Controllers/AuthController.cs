@@ -71,7 +71,7 @@ namespace Call2Owner.Controllers
             if (currentUserId == "0")
                 return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
+            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserName.ToString() == currentUserId);
             if (currentUser == null)
                 return Unauthorized(new { message = "User not found or unauthorized." });
 
@@ -87,22 +87,22 @@ namespace Call2Owner.Controllers
             var jwtToken = handler.ReadJwtToken(token);
             var roleId = jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
 
-            if (currentUser.RoleId == Convert.ToInt32(UserRoles.Admin))
+            if (currentUser.RolesId == Convert.ToInt32(UserRoles.Admin))
             {
                 // Forcefully assign InsurerCustomer role, no need for client to send it
                 model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
             }
 
-            if (await _context.User.AnyAsync(u => u.Email == model.Email || u.MobileNumber == model.MobileNumber))
+            if (await _context.User.AnyAsync(u => u.Email == model.Email || u.PhoneNumber == model.MobileNumber))
                 return BadRequest(new { message = "Email / Phone number already exists!" });
 
             // Ensure that the new user cannot have the same role as the current user
-            if (currentUser.RoleId == model.RoleId)
+            if (currentUser.RolesId == model.RoleId)
                 return BadRequest(new { message = "You cannot assign the same role as yours." });
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RolesId);
             if (!validChildRole && role != UserRoles.SuperAdmin)
                 return Forbid("You do not have permission to assign this role.");
 
@@ -115,12 +115,12 @@ namespace Call2Owner.Controllers
 
             var user = new User
             {
-                Id = Username,
+                UserName = Username,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 Email = model.Email,
-                MobileNumber = model.MobileNumber,
-                RoleId = model.RoleId,
+                PhoneNumber = model.MobileNumber,
+                RolesId = model.RoleId,
                 VerificationCode = verificationCode,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
@@ -181,7 +181,7 @@ namespace Call2Owner.Controllers
             if (currentUserId == "0")
                 return Unauthorized(new { message = "Invalid user." });
 
-            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id.ToString() == currentUserId);
+            var currentUser = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserName.ToString() == currentUserId);
             if (currentUser == null)
                 return Unauthorized(new { message = "User not found or unauthorized." });
 
@@ -206,24 +206,24 @@ namespace Call2Owner.Controllers
 
             if (email == null)
             {
-                if (await _context.User.AnyAsync(u =>  u.MobileNumber == mobile))
+                if (await _context.User.AnyAsync(u =>  u.PhoneNumber == mobile))
                 {
                     return BadRequest(new { message = "Mobile Number or Email already exists!" });
                 }
             }
-            else if (await _context.User.AnyAsync(u => u.Email.ToLower() == email || u.MobileNumber == mobile))
+            else if (await _context.User.AnyAsync(u => u.Email.ToLower() == email || u.PhoneNumber == mobile))
             {
                 return BadRequest(new { message = "Mobile Number or Email already exists!" });
             }
 
 
             // Ensure that the new user cannot have the same role as the current user
-            if (currentUser.RoleId == model.RoleId)
+            if (currentUser.RolesId == model.RoleId)
                 return BadRequest(new { message = "You cannot assign the same role as yours." });
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RoleId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RolesId);
             if (!validChildRole && (role != UserRoles.SuperAdmin || role != UserRoles.Admin))
                 return Forbid("You do not have permission to assign this role.");
 
@@ -254,13 +254,13 @@ namespace Call2Owner.Controllers
 
             var user = new User
             {
-                Id = Username,
+                UserName = Username,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 Email = email,
-                MobileNumber = mobile,
+                PhoneNumber = mobile,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                RoleId = model.RoleId,
+                RolesId = model.RoleId,
                 VerificationCode = verificationCode,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
@@ -277,7 +277,7 @@ namespace Call2Owner.Controllers
             var AddSocietyUser = new SocietyUser
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserId = user.UserName,
                 SocietyId = model.SocietyId,
                 IsApproved = IsApproved,
                 ApprovedOn = ApprovedOn,
@@ -292,20 +292,16 @@ namespace Call2Owner.Controllers
 
             await _context.SaveChangesAsync();
 
-            if (user.RoleId == Convert.ToInt32(UserRoles.Admin))
+            if (user.RolesId == Convert.ToInt32(UserRoles.Admin))
             {
                 var insurerToSendDTO = new InsurerUserDTO
                 {
-                    UserId = user.Id,
+                    UserId = user.UserName,
                     InsurerId = Guid.Parse(currentUserId),
-                    IsActive = user.IsActive ?? false,
-                    IsDeleted = user.IsDeleted ?? false
+                    IsActive = user.IsActive,
+                    IsDeleted = user.IsDeleted
                 };
-
-
-
             }
-
 
             return Ok(new { message = "User registered successfully!" });
         }
@@ -324,7 +320,7 @@ namespace Call2Owner.Controllers
 
             var user = await _context.User
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.UserName == userId);
 
             if (user == null)
                 return NotFound(new { message = "User not found." });
@@ -334,13 +330,13 @@ namespace Call2Owner.Controllers
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                MobileNumber = user.MobileNumber,
-                RoleId = user.RoleId
+                MobileNumber = user.PhoneNumber,
+                RoleId = user.RolesId
             };
 
             return Ok(new
             {
-                UserId = user.Id,
+                UserId = user.UserName,
                 Token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "") // Send token
             });
         }
@@ -353,7 +349,7 @@ namespace Call2Owner.Controllers
                 return BadRequest("Email is required.");
 
             var user = await _context.User
-                .FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.MobileNumber);
 
             if (user == null)
                 return NotFound("User not found.");
@@ -385,17 +381,17 @@ namespace Call2Owner.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             var user = await _context.User
-                .Include(u => u.Role)
+                .Include(u => u.Roles)
                     .ThenInclude(r => r.RoleClaim) // Include RoleClaims under Role
-                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);
+                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.PhoneNumber == model.UserName);
 
-            if (user == null || !user.IsActive.GetValueOrDefault() || !user.IsVerified.GetValueOrDefault())
+            if (user == null || !user.IsActive || !user.IsVerified.Value)
                 return Unauthorized(new { message = "Account is not active or verified. Please reset your password." });
 
             if (!BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
                 return Unauthorized(new { message = "Invalid Password!" });
 
-            var roleClaimValues = user.Role.RoleClaim
+            var roleClaimValues = user.Roles.RoleClaim
                                 .OrderBy(rc => rc.Id)
                                 .Select(rc => rc.ModulePermissionsJson.ToString())
                                 .FirstOrDefault();
@@ -404,7 +400,7 @@ namespace Call2Owner.Controllers
 
             UserDto userDto = _mapper.Map<UserDto>(user); // Convert to DTOs
 
-            return Ok(new { token, role = user.Role?.RoleName, User = userDto });
+            return Ok(new { token, role = user.Roles?.RoleName, User = userDto });
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
@@ -640,7 +636,7 @@ namespace Call2Owner.Controllers
                 // Create UserParent relationship (only if not exists)
                 var userParent = new UserParent
                 {
-                    UserId = user.Id,
+                    UserId = user.UserName,
                     ParentId = int.Parse(user.CreatedBy),
                     IsActive = true,
                     IsDeleted = false,
@@ -684,7 +680,7 @@ namespace Call2Owner.Controllers
 
             // Fetch Users belonging to those roles
             var users = await _context.User
-                .Where(u => childRoleIds.Contains(u.RoleId))
+                .Where(u => childRoleIds.Contains(u.RolesId))
                 .ToListAsync();
 
             var userList = _mapper.Map<List<UserDto>>(users); // Convert to DTOs
@@ -714,16 +710,16 @@ namespace Call2Owner.Controllers
         public async Task<IActionResult> GetAllUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var usersQuery = _context.User
-                .Include(c => c.Role)
+                .Include(c => c.Roles)
                 .Select(u => new UsersDtoOutput
                 {
-                    userId = u.Id,
+                    userId = u.UserName,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RoleId,
-                    RoleName = u.Role.RoleName,
+                    RoleId = u.RolesId,
+                    RoleName = u.Roles.RoleName,
                     Email = u.Email,
-                    MobileNumber = u.MobileNumber,
+                    MobileNumber = u.PhoneNumber,
                     IsActive = u.IsActive,
                     IsVerified = u.IsVerified
                 });
@@ -752,12 +748,12 @@ namespace Call2Owner.Controllers
                 {
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RoleId,
+                    RoleId = u.RolesId,
                     Email = u.Email,
-                    MobileNumber = u.MobileNumber,
+                    MobileNumber = u.PhoneNumber,
                     IsActive = u.IsActive,
                     IsVerified = u.IsVerified,
-                    Id = u.Id
+                    Id = u.UserName
                 }).Where(x => x.RoleId == roleId)
                 .ToListAsync();
 
@@ -780,17 +776,17 @@ namespace Call2Owner.Controllers
 
             // Step 2: Get users with the parent role ID
             var users = await _context.User
-                .Where(u => u.RoleId == parentRoleId)
+                .Where(u => u.RolesId == parentRoleId)
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RoleId,
+                    RoleId = u.RolesId,
                     Email = u.Email,
-                    MobileNumber = u.MobileNumber,
+                    MobileNumber = u.PhoneNumber,
                     IsActive = u.IsActive,
                     IsVerified = u.IsVerified,
-                    Id = u.Id
+                    Id = u.UserName
                 })
                 .ToListAsync();
 
@@ -812,14 +808,14 @@ namespace Call2Owner.Controllers
 
             var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.UserName.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role?.Id.ToString() ?? "0"),
+                    new Claim(ClaimTypes.Role, user.Roles?.Id.ToString() ?? "0"),
                     new Claim("FirstName", user.FirstName ?? ""),
                     new Claim("LastName", user.LastName ?? ""),
-                    new Claim("MobileNumber", user.MobileNumber ?? ""),
-                    new Claim("UserId", user.Id.ToString()),
-                    new Claim("RoleName", user.Role?.RoleName ?? "User")
+                    new Claim("MobileNumber", user.PhoneNumber ?? ""),
+                    new Claim("UserId", user.UserName.ToString()),
+                    new Claim("RoleName", user.Roles?.RoleName ?? "User")
                 };
 
             claims.Add(new Claim("Permissions", string.IsNullOrWhiteSpace(modulePermissions) ? "" : modulePermissions));
@@ -902,12 +898,12 @@ namespace Call2Owner.Controllers
 
                     var superAdmin = new User
                     {
-                        Id = username,
+                        UserName = username,
                         FirstName = "Super",
                         LastName = "Admin",
                         Email = "superadmin@gmail.com",
-                        MobileNumber = "1122334455",
-                        RoleId = superAdminRole.Id,
+                        PhoneNumber = "1122334455",
+                        RolesId = superAdminRole.Id,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Super@123"),
                         IsActive = true,
                         IsVerified = true,
@@ -989,18 +985,18 @@ namespace Call2Owner.Controllers
                 .ToListAsync();
 
             var users = await _context.User
-                .Where(x => usersUnderInsurer.Contains(x.Id))
+                .Where(x => usersUnderInsurer.Contains(x.UserName))
                .Select(u => new UsersDtoOutput
                {
                    
                    FirstName = u.FirstName,
                    LastName = u.LastName,
-                   RoleId = u.RoleId,
+                   RoleId = u.RolesId,
                    Email = u.Email,
-                   MobileNumber = u.MobileNumber,
+                   MobileNumber = u.PhoneNumber,
                    IsActive = u.IsActive,
                    IsVerified = u.IsVerified,
-                   userId = u.Id
+                   userId = u.UserName
                })
                .ToListAsync();
 
@@ -1077,6 +1073,7 @@ namespace Call2Owner.Controllers
         private string GetUserRolesFromToken()
         {
             var identity = HttpContext.User.Identity as ClaimsIdentity;
+
             if (identity == null) return null;
 
             var roleClaim = identity.FindFirst(ClaimTypes.Role);
@@ -1131,6 +1128,7 @@ namespace Call2Owner.Controllers
         private string GetUserRoleFromToken()
         {
             var identity = HttpContext.User.Identity as ClaimsIdentity;
+
             if (identity == null) return null;
 
             var roleClaim = identity.FindFirst(ClaimTypes.Role);  // Extract role name from token

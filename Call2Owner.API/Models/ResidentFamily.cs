@@ -18,7 +18,8 @@ public partial class ResidentFamily
     public string? MobileNumber { get; set; }
 
     public string? ExitType { get; set; }
-    public string ResidentFamilyCode { get; set; }
+
+    public string ResidentFamilyCode { get; set; } = null!;
 
     public bool IsActive { get; set; }
 

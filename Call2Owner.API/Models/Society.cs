@@ -58,21 +58,24 @@ public partial class Society
     public string? PinCode { get; set; }
 
     public string? Address { get; set; }
+
     public bool? IsDocumentRequired { get; set; }
+
     public bool? IsDocumentUploaded { get; set; }
+
     public string? DetailJson { get; set; }
 
     public virtual City City { get; set; } = null!;
 
     public virtual Country Country { get; set; } = null!;
 
-    public virtual ICollection<SocietyBuilding> SocietyBuilding { get; set; } = new List<SocietyBuilding>();
+    public virtual ICollection<SocietyBuilding> SocietyBuildings { get; set; } = new List<SocietyBuilding>();
 
-    public virtual ICollection<SocietyDocumentUploaded> SocietyDocumentUploaded { get; set; } = new List<SocietyDocumentUploaded>();
+    public virtual ICollection<SocietyDocumentUploaded> SocietyDocumentUploadeds { get; set; } = new List<SocietyDocumentUploaded>();
 
-    public virtual ICollection<SocietyFlat> SocietyFlat { get; set; } = new List<SocietyFlat>();
+    public virtual ICollection<SocietyFlat> SocietyFlats { get; set; } = new List<SocietyFlat>();
 
-    public virtual ICollection<SocietyUser> SocietyUser { get; set; } = new List<SocietyUser>();
+    public virtual ICollection<SocietyUser> SocietyUsers { get; set; } = new List<SocietyUser>();
 
     public virtual State State { get; set; } = null!;
 }

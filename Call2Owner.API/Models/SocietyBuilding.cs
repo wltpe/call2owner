@@ -35,5 +35,5 @@ public partial class SocietyBuilding
 
     public virtual Society Society { get; set; } = null!;
 
-    public virtual ICollection<SocietyFlat> SocietyFlat { get; set; } = new List<SocietyFlat>();
+    public virtual ICollection<SocietyFlat> SocietyFlats { get; set; } = new List<SocietyFlat>();
 }

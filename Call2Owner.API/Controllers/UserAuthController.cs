@@ -71,7 +71,7 @@ namespace Call2Owner.Controllers
             string otp = otpGenerator.GenerateOTP();
 
             var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
+                                             .FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
 
             Guid Username = Guid.NewGuid();
 
@@ -85,15 +85,15 @@ namespace Call2Owner.Controllers
                 // Create new user
                 var newUser = new User
                 {
-                    Id = Username,
-                    MobileNumber = dto.MobileNumber,
+                    UserName = Username,
+                    PhoneNumber = dto.MobileNumber,
                     FirstName=dto.FirstName,
                     LastName = dto.LastName,
                     Email = dto.Email,
                     Otp = otp,
                     OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
                     ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
-                    RoleId = Convert.ToInt32(UserRoles.Resident),
+                    RolesId = Convert.ToInt32(UserRoles.Resident),
                     OtpValidatedOn = null,
                     IsActive = true,
                     IsVerified = false,
@@ -105,7 +105,7 @@ namespace Call2Owner.Controllers
                 var AddResident = new Resident
                 {
                     Id = Guid.NewGuid(),
-                    UserId = newUser.Id,
+                    UserId = newUser.UserName,
                     ResidentCode = otp,
                     IsDocumentUploaded = false,
                     IsApproved = false,
@@ -143,7 +143,7 @@ namespace Call2Owner.Controllers
             string otp = otpGenerator.GenerateOTP();
 
 
-              var existingUser = await _context.User.FirstOrDefaultAsync(u => u.MobileNumber == dto.MobileNumber);
+              var existingUser = await _context.User.FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
             
 
             if (existingUser == null)
@@ -157,7 +157,7 @@ namespace Call2Owner.Controllers
             existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
             existingUser.IsActive = true;
             existingUser.IsVerified = true;
-            existingUser.UpdatedBy = existingUser.Id.ToString();
+            existingUser.UpdatedBy = existingUser.UserName.ToString();
             existingUser.UpdatedOn = DateTime.UtcNow;
 
 
@@ -166,7 +166,7 @@ namespace Call2Owner.Controllers
 
             var message = $"Your one time password to {otp} into WLTPE is sign-in. Valid for 10 mins.Do not share your OTP with anyone-Yoke payment";
 
-            await SendOtpAsync(existingUser.MobileNumber, message);
+            await SendOtpAsync(existingUser.PhoneNumber, message);
 
             return Ok(new { message = "OTP sent to your registered mobile number!" });
         }
@@ -178,14 +178,14 @@ namespace Call2Owner.Controllers
             _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
 
             var user = await _context.User
-                .Include(u => u.Role)
+                .Include(u => u.Roles)
                     .ThenInclude(r => r.RoleClaim)
-                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.MobileNumber == model.UserName);
+                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.PhoneNumber == model.UserName);
 
             if (user == null)
                 return Unauthorized(new { message = "Invalid user credentials." });
 
-            if (!user.IsActive.GetValueOrDefault() || !user.IsVerified.GetValueOrDefault())
+            if (!user.IsActive || !user.IsVerified.GetValueOrDefault())
                 return Unauthorized(new { message = "Account is not active or verified. Please contact support." });
 
             // ✅ OTP Validation
@@ -199,7 +199,7 @@ namespace Call2Owner.Controllers
             await _context.SaveChangesAsync();
 
             // ✅ Get RoleClaims
-            var roleClaimValues = user.Role?.RoleClaim
+            var roleClaimValues = user.Roles?.RoleClaim
                                     .OrderBy(rc => rc.Id)
                                     .Select(rc => rc.ModulePermissionsJson.ToString())
                                     .FirstOrDefault();
@@ -211,7 +211,7 @@ namespace Call2Owner.Controllers
 
             object insurerData = null; // Placeholder for future logic
 
-            return Ok(new { token, role = user.Role?.RoleName, User = userDto, InsurerId = insurerData });
+            return Ok(new { token, role = user.Roles?.RoleName, User = userDto, InsurerId = insurerData });
         }
         
         [HttpPost("resident/approve")]
@@ -295,14 +295,14 @@ namespace Call2Owner.Controllers
 
             var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.UserName.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role?.Id.ToString() ?? "0"),
+                    new Claim(ClaimTypes.Role, user.Roles?.Id.ToString() ?? "0"),
                     new Claim("FirstName", user.FirstName ?? ""),
                     new Claim("LastName", user.LastName ?? ""),
-                    new Claim("MobileNumber", user.MobileNumber ?? ""),
-                    new Claim("UserId", user.Id.ToString()),
-                    new Claim("RoleName", user.Role?.RoleName ?? "User")
+                    new Claim("MobileNumber", user.PhoneNumber ?? ""),
+                    new Claim("UserId", user.UserName.ToString()),
+                    new Claim("RoleName", user.Roles?.RoleName ?? "User")
                 };
 
             claims.Add(new Claim("Permissions", string.IsNullOrWhiteSpace(modulePermissions) ? "" : modulePermissions));

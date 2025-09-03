@@ -46,6 +46,8 @@ public partial class ResidentFrequentlyGuest
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
     public string? GuestNumber { get; set; }
+
     public virtual Resident Resident { get; set; } = null!;
 }

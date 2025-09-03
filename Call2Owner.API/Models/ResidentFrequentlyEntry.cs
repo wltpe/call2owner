@@ -56,7 +56,10 @@ public partial class ResidentFrequentlyEntry
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
     public string? VisitingHelpName { get; set; }
+
+    public int? VisitingHelpCategoryCompanyId { get; set; }
 
     public virtual CabCompany? CabCompany { get; set; }
 
@@ -65,4 +68,6 @@ public partial class ResidentFrequentlyEntry
     public virtual Resident Resident { get; set; } = null!;
 
     public virtual VisitingHelpCategory? VisitingHelpCategory { get; set; }
+
+    public virtual VisitingHelpCategoryCompany? VisitingHelpCategoryCompany { get; set; }
 }
