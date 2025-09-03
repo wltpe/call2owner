@@ -1116,6 +1116,7 @@ public partial class DataContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.ToTable("Users");
             entity.HasKey(e => e.UserName);
 
             entity.HasIndex(e => e.RolesId, "IX_Users_RolesId");
