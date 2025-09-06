@@ -18,12 +18,12 @@ namespace Call2Owner.Controllers
             return Ok("Admin Dashboard Access Granted!");
         }
 
-        [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.Add)]
-        [HttpGet("User_Add")]
-        public IActionResult User_Add()
+        [Authorize(Policy = Utilities.Module.SocietyFlats)]
+        [Authorize(Policy = Utilities.Permission.GetAll)]
+        [HttpGet("SocietyFlats_GetAll")]
+        public IActionResult SocietyFlats_GetAll()
         {
-            return Ok("You have permission to User_Add.");
+            return Ok("You have permission to SocietyFlats_GetAll.");
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]

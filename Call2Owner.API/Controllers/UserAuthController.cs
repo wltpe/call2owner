@@ -143,7 +143,7 @@ namespace Call2Owner.Controllers
             string otp = otpGenerator.GenerateOTP();
 
 
-              var existingUser = await _context.User.FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
+           var existingUser = await _context.User.FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
             
 
             if (existingUser == null)
