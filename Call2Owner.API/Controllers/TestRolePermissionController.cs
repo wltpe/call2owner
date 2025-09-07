@@ -18,6 +18,12 @@ namespace Call2Owner.Controllers
             return Ok("Admin Dashboard Access Granted!");
         }
 
+        [HttpGet("SocietyFlats_GetAll_Test")]
+        public IActionResult SocietyFlats_GetAll_Test()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
+        }
+
         [Authorize(Policy = Utilities.Module.SocietyFlats)]
         [Authorize(Policy = Utilities.Permission.GetAll)]
         [HttpGet("SocietyFlats_GetAll")]

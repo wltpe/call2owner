@@ -12,6 +12,7 @@ using Utilities;
 using Microsoft.EntityFrameworkCore;
 using Call2Owner.Models;
 using Call2Owner.API;
+using System.Security.Claims;
 
 var publicEndpoints = new HashSet<string>
 {
@@ -58,21 +59,45 @@ var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"] ?? thr
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false;
-        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            ValidateIssuer = false,
+            ValidateAudience = false,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = true,
-            ValidateAudience = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            RequireExpirationTime = true,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        // Prevent ASP.NET from renaming claim types
+        options.MapInboundClaims = false;
+
+        // Explicitly map "Permissions" into claims
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = ctx =>
+            {
+                var permissions = ctx.Principal?.FindFirst("Permissions")?.Value;
+
+                // If token contains Permissions claim in raw JSON payload
+                if (permissions == null &&
+                    ctx.SecurityToken is System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken &&
+                    jwtToken.Payload.TryGetValue("Permissions", out var permsObj))
+                {
+                    var identity = ctx.Principal!.Identity as ClaimsIdentity;
+                    identity?.AddClaim(new Claim("Permissions", permsObj.ToString()!));
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+
+        options.SaveToken = true;
     });
+
 
 builder.Services.AddScoped<EmailService>();
 

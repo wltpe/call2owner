@@ -16,6 +16,7 @@ namespace Call2Owner
                PermissionRequirement requirement)
         {
             var permissionClaim = context.User.FindFirst("Permissions")?.Value;
+            var permissionClaimsss = context.User.FindFirst("permissions")?.Value;
 
             if (!string.IsNullOrEmpty(permissionClaim))
             {
