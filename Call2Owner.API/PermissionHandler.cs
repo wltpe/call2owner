@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Call2Owner.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using System;
@@ -15,8 +16,9 @@ namespace Call2Owner
                AuthorizationHandlerContext context,
                PermissionRequirement requirement)
         {
-            var permissionClaim = context.User.FindFirst("Permissions")?.Value;
-            var permissionClaimsss = context.User.FindFirst("permissions")?.Value;
+            //var permissionClaim = context.User.FindFirst("Permissions")?.Value;
+            var permissionClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata")?.Value;
+
 
             if (!string.IsNullOrEmpty(permissionClaim))
             {
