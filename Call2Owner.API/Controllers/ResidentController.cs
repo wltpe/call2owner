@@ -64,210 +64,124 @@ namespace Call2Owner.Controllers
         }
 
         #region CommonAPIs
-        [AllowAnonymous]
-        [HttpPost("register-self-resident")]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Permission.Add)]
+        [Authorize]
+        [HttpPost("resident-self-register")]
         public async Task<IActionResult> SelfRegisterResident([FromBody] UserResidentDto dto)
         {
-            if (dto == null || (dto.Email == null && dto.MobileNumber == null))
+            try
             {
-                return BadRequest("Invalid request: Email or Mobile Number is required.");
+
+            if (dto == null || (dto.Username == null))
+            {
+                return BadRequest("Invalid user");
             }
 
-            OTPGenerator otpGenerator = new OTPGenerator();
-            string otp = otpGenerator.GenerateOTP();
 
             var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
+                                             .FirstOrDefaultAsync(u => u.UserName == dto.Username && u.IsActive == true);
+            if (existingUser == null)
+            {
+                return Conflict(new { message = "Unable to register for society." });
+            }
 
             if (existingUser != null)
             {
-                // Update OTP for existing user
-                existingUser.Otp = otp;
-                existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
-                existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
-                existingUser.IsActive = true;
-                existingUser.IsVerified = true;
 
-                _context.User.Update(existingUser);
+                var existingResident = await _context.Resident
+                                           .FirstOrDefaultAsync(u => u.UserId == existingUser.UserName);
+
+                    if (existingResident != null && existingResident.UserId != null)
+                    {
+                        ResidentDto returnobj = new ResidentDto();
+
+                        returnobj.Id = existingResident.Id;
+                        returnobj.UserId = existingResident.UserId;
+                        returnobj.SocietyFlatId = existingResident.SocietyFlatId;
+                        returnobj.EntityTypeDetailId = existingResident.EntityTypeDetailId;
+                        returnobj.IsDocumentUploaded = existingResident.IsDocumentUploaded;
+                        returnobj.ResidentCode = existingResident.ResidentCode;
+                        returnobj.IsApproved = existingResident.IsApproved;
+                        returnobj.ApprovedBy = existingResident.ApprovedBy;
+                        returnobj.ApprovedOn = existingResident.ApprovedOn;
+                        returnobj.IsActive = existingResident.IsActive;
+                        returnobj.CreatedBy = existingResident.CreatedBy;
+                        returnobj.CreatedOn = existingResident.CreatedOn;
+                        returnobj.UpdatedBy = existingResident.UpdatedBy;
+                        returnobj.UpdatedOn = existingResident.UpdatedOn;
+                        returnobj.IsDeleted = existingResident.IsDeleted;
+                        returnobj.DeletedBy = existingResident.DeletedBy;
+                        returnobj.DeletedOn = existingResident.DeletedOn;
+                        returnobj.DetailJson = existingResident.DetailJson;
+
+                        return Conflict(new { statusCode = StatusCodes.Status409Conflict, message = "Resident already registered.", data = returnobj });
+                    }
+
+
+
+
+                        OTPGenerator otpGenerator = new OTPGenerator();
+                string residentCode = otpGenerator.GenerateOTP();
+
+                // Add User as Resident
+                var AddResident = new Resident
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.UserName,
+                    ResidentCode = residentCode,
+                    IsDocumentUploaded = false,
+                    IsApproved = false,
+                    IsActive = true,
+                    CreatedBy = existingUser.UserName.ToString(),
+                    CreatedOn = DateTime.UtcNow
+                };
+
+             var obj = await _context.Resident.AddAsync(AddResident);
+                await _context.SaveChangesAsync();
+
+                    CreateResidentDto returnAddResident = new CreateResidentDto
+                    {
+                         Id = obj.Entity.Id,
+                         UserId = obj.Entity.UserId,
+                         SocietyFlatId = obj.Entity.SocietyFlatId,
+                         EntityTypeDetailId =obj.Entity.EntityTypeDetailId,
+                         IsDocumentUploaded = obj.Entity.IsDocumentUploaded,
+                         ResidentCode = obj.Entity.ResidentCode,
+                         IsApproved = obj.Entity.IsApproved,
+                         ApprovedBy = obj.Entity.ApprovedBy,
+                         ApprovedOn = obj.Entity.ApprovedOn,
+                         IsActive = obj.Entity.IsActive,
+                         CreatedBy = obj.Entity.CreatedBy,
+                         CreatedOn = obj.Entity.CreatedOn,
+                         UpdatedBy = obj.Entity.UpdatedBy,
+                         UpdatedOn = obj.Entity.UpdatedOn,
+                         IsDeleted = obj.Entity.IsDeleted,
+                         DeletedBy = obj.Entity.DeletedBy,
+                         DeletedOn = obj.Entity.DeletedOn,
+                         DetailJson = obj.Entity.DetailJson
+                    };
+
+                    return Ok(new
+                {
+                    statusCode = StatusCodes.Status200OK,
+                    message = "Resident created successfully!",
+                    data = returnAddResident
+                    });
             }
             else
             {
-
-                // Create new user
-                var newUser = new User
-                {
-                    PhoneNumber = dto.MobileNumber,
-                    Otp = otp,
-                    OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
-                    ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
-                    RolesId = Convert.ToInt32(UserRoles.Resident),
-                    OtpValidatedOn = null,
-                    IsActive = true,
-                    IsVerified = true
-                };
-
-                await _context.User.AddAsync(newUser);
+                return BadRequest("Invalid user");
             }
 
-            await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Invalid user");
+            }
 
-            var message = $"Your one time password {otp} for WLTPE sign-in. Valid for 10 mins. Do not share your OTP with anyone - Yoke Payment.";
-            await SendOtpAsync(dto.MobileNumber, message);
-
-            return Ok(new { message = "OTP sent successfully!" });
         }
 
-        [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.Add)]
-        [HttpPost("register-admin-resident")]
-        public async Task<IActionResult> AdminRegisterResident([FromBody] UserResidentDto dto)
-        {
-            if (dto == null || (dto.Email == null && dto.MobileNumber == null))
-            {
-                return BadRequest("Invalid request: Email or Mobile Number is required.");
-            }
-
-            OTPGenerator otpGenerator = new OTPGenerator();
-            string otp = otpGenerator.GenerateOTP();
-
-            var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
-
-            if (existingUser != null)
-            {
-                // Update OTP for existing user
-                existingUser.Otp = otp;
-                existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
-                existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
-                existingUser.IsActive = true;
-                existingUser.IsVerified = true;
-
-                _context.User.Update(existingUser);
-            }
-            else
-            {
-
-                // Create new user
-                var newUser = new User
-                {
-                    PhoneNumber = dto.MobileNumber,
-                    Otp = otp,
-                    OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
-                    ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
-                    RolesId = Convert.ToInt32(UserRoles.Resident),
-                    OtpValidatedOn = null,
-                    IsActive = true,
-                    IsVerified = true
-                };
-
-                await _context.User.AddAsync(newUser);
-            }
-
-            await _context.SaveChangesAsync();
-
-            var message = $"Your one time password {otp} for WLTPE sign-in. Valid for 10 mins. Do not share your OTP with anyone - Yoke Payment.";
-            await SendOtpAsync(dto.MobileNumber, message);
-
-            return Ok(new { message = "OTP sent successfully!" });
-        }
-
-        [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.Add)]
-        [Authorize]
-        [AllowAnonymous]
-        [HttpPost("register-super-admin-resident")]
-        public async Task<IActionResult> SuperAdminRegisterResident([FromBody] UserResidentDto dto)
-        {
-            if (dto == null || (dto.Email == null && dto.MobileNumber == null))
-            {
-                return BadRequest("Invalid request: Email or Mobile Number is required.");
-            }
-
-            OTPGenerator otpGenerator = new OTPGenerator();
-            string otp = otpGenerator.GenerateOTP();
-
-            var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
-
-            if (existingUser != null)
-            {
-                // Update OTP for existing user
-                existingUser.Otp = otp;
-                existingUser.OtpExpireTime = DateTime.UtcNow.AddMinutes(5);
-                existingUser.ResendOtpTime = DateTime.UtcNow.AddMinutes(2);
-                existingUser.IsActive = true;
-                existingUser.IsVerified = true;
-
-                _context.User.Update(existingUser);
-            }
-            else
-            {
-
-                // Create new user
-                var newUser = new User
-                {
-                    PhoneNumber = dto.MobileNumber,
-                    Otp = otp,
-                    OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
-                    ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
-                    RolesId = Convert.ToInt32(UserRoles.Resident),
-                    OtpValidatedOn = null,
-                    IsActive = true,
-                    IsVerified = true
-                };
-
-                await _context.User.AddAsync(newUser);
-            }
-
-            await _context.SaveChangesAsync();
-
-            var message = $"Your one time password {otp} for WLTPE sign-in. Valid for 10 mins. Do not share your OTP with anyone - Yoke Payment.";
-            await SendOtpAsync(dto.MobileNumber, message);
-
-            return Ok(new { message = "OTP sent successfully!" });
-        }
-
-        [AllowAnonymous]
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginSelfDto model)
-        {
-            _logger.LogInformation("Login attempt with OTP for: {UserName}", model.UserName);
-
-            var user = await _context.User
-                .Include(u => u.Roles)
-                    .ThenInclude(r => r.RoleClaim)
-                .FirstOrDefaultAsync(u => u.Email == model.UserName || u.PhoneNumber == model.UserName);
-
-            if (user == null)
-                return Unauthorized(new { message = "Invalid user credentials." });
-
-            if (!user.IsActive || !user.IsVerified.Value)
-                return Unauthorized(new { message = "Account is not active or verified. Please contact support." });
-
-            // ✅ OTP Validation
-            if (user.Otp != model.OTP || user.OtpExpireTime < DateTime.UtcNow)
-                return Unauthorized(new { message = "Invalid or expired OTP." });
-
-            // ✅ Clear OTP after successful login (optional but recommended)
-            user.Otp = null;
-            user.OtpValidatedOn = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            // ✅ Get RoleClaims
-            var roleClaimValues = user.Roles?.RoleClaim
-                                    .OrderBy(rc => rc.Id)
-                                    .Select(rc => rc.ModulePermissionsJson.ToString())
-                                    .FirstOrDefault();
-
-            // ✅ Generate JWT Token
-            var token = GenerateJwtToken(user, roleClaimValues);
-
-            var userDto = _mapper.Map<UserDto>(user);
-
-            object insurerData = null; // Placeholder for future logic
-
-            return Ok(new { token, role = user.Roles?.RoleName, User = userDto, InsurerId = insurerData });
-        }
 
         //[Authorize(Policy = Utilities.Module.Resident)]
         //[Authorize(Policy = Utilities.Permission.GetAllCountry)]
@@ -322,7 +236,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllBuildingBySocietyId)]
+        //[Authorize(Policy = Utilities.Permission.GetAllBuildingBySocietyId)]
         [HttpGet("get-all-building-by-society-id")]
         public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(Guid SocietyId)
         {
@@ -335,7 +249,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllFlatBySocietyBuildingId)]
+        //[Authorize(Policy = Utilities.Permission.GetAllFlatBySocietyBuildingId)]
         [HttpGet("get-all-flats-by-society-building-id")]
         public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(Guid SocietyBuildingId)
         {
@@ -348,7 +262,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllResidentTypes)]
+        //[Authorize(Policy = Utilities.Permission.GetAllResidentTypes)]
         [HttpGet("get-all-resident-types")]
         public async Task<IActionResult> GetAllResidentTypes(int EntityTypeId)
         {
@@ -399,7 +313,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.UpdateResidentType)]
+        //[Authorize(Policy = Utilities.Permission.UpdateResidentType)]
         [HttpPost("update-resident-selected-type")]
         public async Task<IActionResult> UpdateResidentSelectedType([FromForm] SelectedRecord obj)
         {
@@ -667,7 +581,7 @@ namespace Call2Owner.Controllers
         #region FamilyAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
         [HttpGet("get-resident-household-family-form")]
         public async Task<IActionResult> GetResidentHouseholdFamilyForm()
         {
@@ -743,7 +657,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
         [HttpPost("add-resident-household-family")]
         public async Task<IActionResult> AddResidentHouseholdFamily([FromForm] AddFamilySelectedRecord obj)
         {
@@ -942,7 +856,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdFamily)]
+        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdFamily)]
         [HttpGet("get-all-resident-household-family")]
         public async Task<ActionResult<IEnumerable<ResidentFamilyDto>>> GetAllResidentHouseholdFamily()
         {
@@ -986,7 +900,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdFamilyById)]
+        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdFamilyById)]
         [HttpPost("update-resident-household-family-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdFamilyById([FromForm] UpdateFamilySelectedRecord obj)
         {
@@ -1203,7 +1117,7 @@ namespace Call2Owner.Controllers
         #region PetAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdPetForm)]
+        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdPetForm)]
         [HttpGet("get-resident-household-pet-form")]
         public async Task<IActionResult> GetResidentHouseholdPetForm()
         {
@@ -1287,7 +1201,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdPet)]
+        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdPet)]
         [HttpPost("add-resident-household-pet")]
         public async Task<IActionResult> AddResidentHouseholdPet([FromForm] PetRequest petDataJson)
         {
@@ -1496,7 +1410,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdPet)]
+        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdPet)]
         [HttpGet("get-all-resident-household-pet")]
         public async Task<ActionResult<IEnumerable<ResidentPetDto>>> GetAllResidentHouseholdPet()
         {
@@ -1540,7 +1454,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdPetById)]
+        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdPetById)]
         [HttpPost("update-resident-household-pet-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdPetById([FromForm] UpdatePetSelectedRecord obj)
         {
@@ -1676,7 +1590,7 @@ namespace Call2Owner.Controllers
         #region VehicleAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdVehicleForm)]
+        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdVehicleForm)]
         [HttpGet("get-resident-household-vehicle-form")]
         public async Task<IActionResult> GetResidentHouseholdVehicleForm()
         {
@@ -1742,7 +1656,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdVehicle)]
+        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdVehicle)]
         [HttpPost("add-resident-household-vehicle")]
         public async Task<IActionResult> AddResidentHouseholdVehicle([FromForm] VehicleRequest vehicleData)
         {
@@ -1907,7 +1821,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
         [HttpGet("get-all-resident-household-vehicle")]
         public async Task<ActionResult<IEnumerable<ResidentVehicleDto>>> GetAllResidentHouseholdVehicle()
         {
@@ -1951,7 +1865,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
         [HttpPost("update-resident-household-vehicle-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdVehicleById([FromForm] UpdateVehicleSelectedRecord obj)
         {
@@ -2072,7 +1986,7 @@ namespace Call2Owner.Controllers
 
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
         [HttpGet("get-resident-household-frequent-guests-form")]
         public async Task<IActionResult> GetResidentHouseholdFrequentGuestsForm()
         {
@@ -2129,7 +2043,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
         [HttpPost("add-resident-household-frequent-guests")]
         public async Task<IActionResult> AddResidentHouseholdFrequentGuests([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
         {
@@ -2256,7 +2170,7 @@ namespace Call2Owner.Controllers
 
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
         [HttpGet("get-all-resident-household-frequent-guests")]
         public async Task<ActionResult<IEnumerable<ResidentFrequentGuestsDto>>> GetAllResidentHouseholdFrequentGuests()
         {
@@ -2300,7 +2214,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
         [HttpPost("update-resident-household-frequent-guests-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdFrequentGuestsById([FromForm] UpdateFrequentlyGuestsSelectedRecord obj)
         {
@@ -2444,7 +2358,7 @@ namespace Call2Owner.Controllers
         #region Frequent Entries APIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
         [HttpGet("get-resident-household-frequent-entries-form")]
         public async Task<IActionResult> GetResidentHouseholdFrequentEntriesForm()
         {
@@ -2513,7 +2427,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        [Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
         [HttpPost("add-resident-household-frequent-entries")]
         public async Task<IActionResult> AddResidentHouseholdFrequentEntries([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
         {

@@ -159,7 +159,7 @@ namespace Oversight.Controllers
 
         // 2. Get role by ID with role claims
         [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.GetById)]
+        //[Authorize(Policy = Utilities.Permission.GetById)]
         [HttpGet("role/{id}")]
         public async Task<ActionResult<RoleDetailDto>> GetRoleById(int id)
         {

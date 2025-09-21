@@ -21,7 +21,7 @@ namespace Call2Owner
                 AddPolicy(options, Permission.Add);
                 AddPolicy(options, Permission.Update);
                 AddPolicy(options, Permission.Delete);
-                AddPolicy(options, Permission.GetById);
+                AddPolicy(options, Permission.Get);
                 AddPolicy(options, Permission.GetAll);
             });
 

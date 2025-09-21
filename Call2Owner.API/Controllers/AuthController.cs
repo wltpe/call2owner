@@ -62,7 +62,7 @@ namespace Call2Owner.Controllers
         #region Public Methods
 
         [Authorize(Policy = Utilities.Module.Society)]
-        [Authorize(Policy = Utilities.Permission.AddUser)]
+        //[Authorize(Policy = Utilities.Permission.AddUser)]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserDto model)
         {
@@ -307,7 +307,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.GetById)]
+        //[Authorize(Policy = Utilities.Permission.GetById)]
         [Authorize] // Ensure only authenticated users can access this
         [HttpGet("currentUserDetail")]
         public async Task<IActionResult> GetCurrentUser()
@@ -404,7 +404,7 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]
-        [Authorize(Policy = Utilities.Permission.GetById)]
+        //[Authorize(Policy = Utilities.Permission.GetById)]
         [HttpGet("profile")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]

@@ -62,69 +62,57 @@ namespace Call2Owner.Controllers
         [HttpPost("resident-self-register")]
         public async Task<IActionResult> SelfRegisterResident([FromBody] UserResidentDto dto)
         {
-            if (dto == null || (dto.Email == null && dto.MobileNumber == null))
+            if (dto == null || (dto.Username == null))
             {
-                return BadRequest("Invalid request: Email or Mobile Number is required.");
+                return BadRequest("Invalid user");
             }
 
-            OTPGenerator otpGenerator = new OTPGenerator();
-            string otp = otpGenerator.GenerateOTP();
 
             var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.PhoneNumber == dto.MobileNumber);
-
-            Guid Username = Guid.NewGuid();
+                                             .FirstOrDefaultAsync(u => u.UserName == dto.Username && u.IsActive == true);
+            if (existingUser == null)
+            {
+                return Conflict(new { message = "Unable to register for society." });
+            }
 
             if (existingUser != null)
             {
-                return Ok(new { message = "Resident already registered."});
-            }
-            else
-            {
 
-                // Create new user
-                var newUser = new User
+                var existingResident = await _context.Resident
+                                           .FirstOrDefaultAsync(u => u.UserId == existingUser.UserName);
+
+                if (existingResident != null && existingResident.UserId !=null)
                 {
-                    UserName = Username,
-                    PhoneNumber = dto.MobileNumber,
-                    FirstName=dto.FirstName,
-                    LastName = dto.LastName,
-                    Email = dto.Email,
-                    Otp = otp,
-                    OtpExpireTime = DateTime.UtcNow.AddMinutes(5),
-                    ResendOtpTime = DateTime.UtcNow.AddMinutes(2),
-                    RolesId = Convert.ToInt32(UserRoles.Resident),
-                    OtpValidatedOn = null,
-                    IsActive = true,
-                    IsVerified = false,
-                    CreatedBy=Username.ToString(),
-                    CreatedOn=DateTime.UtcNow
-                };
+                return Conflict(new { message = "Resident already registered."});
+                }
+
+                OTPGenerator otpGenerator = new OTPGenerator();
+                string residentCode = otpGenerator.GenerateOTP();
 
                 // Add User as Resident
                 var AddResident = new Resident
                 {
                     Id = Guid.NewGuid(),
-                    UserId = newUser.UserName,
-                    ResidentCode = otp,
+                    UserId = existingUser.UserName,
+                    ResidentCode = residentCode,
                     IsDocumentUploaded = false,
                     IsApproved = false,
                     IsActive = true,
-                    CreatedBy = Username.ToString(),
+                    CreatedBy = existingUser.UserName.ToString(),
                     CreatedOn = DateTime.UtcNow
                 };
 
-                await _context.User.AddAsync(newUser);
                 await _context.Resident.AddAsync(AddResident);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Resident created successfully!" });
+            }
+            else
+            {
+                return BadRequest("Invalid user");
             }
 
-            await _context.SaveChangesAsync();
-
-            var message = $"Your one time password to {otp} into WLTPE is sign-in. Valid for 10 mins.Do not share your OTP with anyone-Yoke payment";
-           
-            await SendOtpAsync(dto.MobileNumber, message);
-
-            return Ok(new { message = "OTP sent successfully!" });
+          
         }
 
         [Authorize(Policy = Utilities.Module.UserManagement)]

@@ -15,6 +15,7 @@ namespace Call2Owner.DTO
 
         public bool IsDocumentUploaded { get; set; }
 
+        public string? ResidentCode { get; set; }
         public bool IsApproved { get; set; }
 
         public string? ApprovedBy { get; set; }
@@ -30,7 +31,7 @@ namespace Call2Owner.DTO
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedOn { get; set; }
-        public bool IsDeleted { get; set; }
+        public bool? IsDeleted { get; set; }
         public string? DeletedBy { get; set; }
 
         public DateTime? DeletedOn { get; set; }
@@ -49,7 +50,7 @@ namespace Call2Owner.DTO
         public int? EntityTypeDetailId { get; set; }
 
         public bool IsDocumentUploaded { get; set; }
-
+        public string? ResidentCode { get; set; }
         public bool IsApproved { get; set; }
 
         public string? ApprovedBy { get; set; }
@@ -63,7 +64,7 @@ namespace Call2Owner.DTO
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedOn { get; set; }
-        public bool IsDeleted { get; set; }
+        public bool? IsDeleted { get; set; }
         public string? DeletedBy { get; set; }
 
         public DateTime? DeletedOn { get; set; }
@@ -84,6 +85,7 @@ namespace Call2Owner.DTO
 
         public bool IsDocumentUploaded { get; set; }
 
+        public string? ResidentCode { get; set; }
         public bool IsApproved { get; set; }
 
         public string? ApprovedBy { get; set; }
@@ -99,7 +101,7 @@ namespace Call2Owner.DTO
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedOn { get; set; }
-        public bool IsDeleted { get; set; }
+        public bool? IsDeleted { get; set; }
         public string? DeletedBy { get; set; }
 
         public DateTime? DeletedOn { get; set; }
