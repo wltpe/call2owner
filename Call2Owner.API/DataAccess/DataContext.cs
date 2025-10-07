@@ -90,6 +90,12 @@ public partial class DataContext : DbContext
     public virtual DbSet<VisitingHelpCategory> VisitingHelpCategory { get; set; }
     public virtual DbSet<VisitingHelpCategoryCompany> VisitingHelpCategoryCompany { get; set; }
 
+    public virtual DbSet<SocietyBuildingType> SocietyBuildingType { get; set; }
+    public virtual DbSet<SocietyUserFlatWorkingHistory> SocietyUserFlatWorkingHistory { get; set; }
+
+    public virtual DbSet<SocietyUserProfile> SocietyUserProfile { get; set; }
+
+    public virtual DbSet<SocietyUserTimeSlot> SocietyUserTimeSlot { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -584,7 +590,7 @@ public partial class DataContext : DbContext
                 .HasForeignKey(d => d.EntityTypeDetailId)
                 .HasConstraintName("FK_Resident_EntityTypeDetails");
 
-            entity.HasOne(d => d.SocietyFlat).WithMany(p => p.Residents)
+            entity.HasOne(d => d.SocietyFlat).WithMany(p => p.Resident)
                 .HasForeignKey(d => d.SocietyFlatId)
                 .HasConstraintName("FK_Resident_SocietyFlat");
 
@@ -1116,17 +1122,12 @@ public partial class DataContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.ToTable("Users");
             entity.HasKey(e => e.UserName);
-
-            entity.HasIndex(e => e.RolesId, "IX_Users_RolesId");
 
             entity.Property(e => e.UserName).ValueGeneratedNever();
             entity.Property(e => e.AccessToken).HasMaxLength(1000);
             entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
             entity.Property(e => e.DeletedBy).HasMaxLength(255);
-            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
             entity.Property(e => e.Dob).HasColumnName("DOB");
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.FirstName).HasMaxLength(200);
@@ -1135,16 +1136,12 @@ public partial class DataContext : DbContext
             entity.Property(e => e.Otp)
                 .HasMaxLength(10)
                 .HasColumnName("OTP");
-            entity.Property(e => e.OtpExpireTime).HasColumnType("datetime");
-            entity.Property(e => e.OtpValidatedOn).HasColumnType("datetime");
             entity.Property(e => e.PhoneNumber).HasMaxLength(15);
             entity.Property(e => e.Prefix).HasMaxLength(200);
             entity.Property(e => e.RefreshToken).HasMaxLength(1000);
-            entity.Property(e => e.RefreshTokenExpireTime).HasColumnType("datetime");
-            entity.Property(e => e.ResendOtpTime).HasColumnType("datetime");
             entity.Property(e => e.Role).HasMaxLength(100);
+            entity.Property(e => e.RolesId).HasDefaultValue(0);
             entity.Property(e => e.UpdatedBy).HasMaxLength(255);
-            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
             entity.Property(e => e.VerificationCodeGenerationTime).HasColumnType("datetime");
             entity.Property(e => e.VerificationCodeValidationTime).HasColumnType("datetime");
 
@@ -1271,6 +1268,77 @@ public partial class DataContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_VisitingHelpCategoryCompany_VisitingHelpCategory");
         });
+
+        modelBuilder.Entity<SocietyBuildingType>(entity =>
+        {
+            entity.ToTable("SocietyBuildingType");
+
+            entity.Property(e => e.Name).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<SocietyUserFlatWorkingHistory>(entity =>
+        {
+            entity.ToTable("SocietyUserFlatWorkingHistory");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
+            entity.Property(e => e.DeletedBy).HasMaxLength(255);
+            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
+            entity.Property(e => e.UpdatedBy).HasMaxLength(255);
+            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
+
+            entity.HasOne(d => d.SocietyFlat).WithMany(p => p.SocietyUserFlatWorkingHistory)
+                .HasForeignKey(d => d.SocietyFlatId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SocietyUserFlatWorkingHistory_SocietyFlat");
+
+            entity.HasOne(d => d.SocietyUserProfile).WithMany(p => p.SocietyUserFlatWorkingHistory)
+                .HasForeignKey(d => d.SocietyUserProfileId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SocietyUserFlatWorkingHistory_SocietyUserProfile");
+        });
+
+        modelBuilder.Entity<SocietyUserProfile>(entity =>
+        {
+            entity.ToTable("SocietyUserProfile");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.AadhaarNumber).HasMaxLength(20);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.PanNumber).HasMaxLength(20);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.UniqueCode).HasMaxLength(10);
+            entity.Property(e => e.VehicleNo).HasMaxLength(100);
+
+            entity.HasOne(d => d.SocietyBuildingType).WithMany(p => p.SocietyUserProfile)
+                .HasForeignKey(d => d.SocietyBuildingTypeId)
+                .HasConstraintName("FK_SocietyUserProfile_SocietyBuildingType");
+
+            entity.HasOne(d => d.SocietyUser).WithMany(p => p.SocietyUserProfile)
+                .HasForeignKey(d => d.SocietyUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SocietyUserProfile_SocietyUserProfile");
+        });
+
+        modelBuilder.Entity<SocietyUserTimeSlot>(entity =>
+        {
+            entity.ToTable("SocietyUserTimeSlot");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
+            entity.Property(e => e.DeletedBy).HasMaxLength(255);
+            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
+            entity.Property(e => e.UpdatedBy).HasMaxLength(255);
+            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
+
+            entity.HasOne(d => d.SocietyUserProfile).WithMany(p => p.SocietyUserTimeSlot)
+                .HasForeignKey(d => d.SocietyUserProfileId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SocietyUserTimeSlot_SocietyUserProfile");
+        });
+
 
         OnModelCreatingPartial(modelBuilder);
     }

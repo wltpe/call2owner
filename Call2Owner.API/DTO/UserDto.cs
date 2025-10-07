@@ -14,7 +14,7 @@ namespace Call2Owner.DTO
         public bool? UsePassword { get; set; } = true;
         [Required]
         public string? MobileNumber { get; set; }
-        public int RoleId { get; set; }
+        public int? RoleId { get; set; }
     }
 
     public class SocietyUserDto
@@ -40,8 +40,8 @@ namespace Call2Owner.DTO
 
     public class UserResidentDto
     {
-        [Required]
-        public Guid Username { get; set; }
+     
+        public Guid? Username { get; set; }
     }
 
     public class LoginResidentDto

@@ -1,18 +1,19 @@
+using Call2Owner;
+using Call2Owner.API;
+using Call2Owner.Controllers;
+using Call2Owner.Models;
+using Call2Owner.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Call2Owner;
-using Call2Owner.Controllers;
-using Call2Owner.Services;
 using RestSharp;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using Utilities;
-using Microsoft.EntityFrameworkCore;
-using Call2Owner.Models;
-using Call2Owner.API;
-using System.Security.Claims;
 
 var publicEndpoints = new HashSet<string>
 {
@@ -55,6 +56,8 @@ builder.Services.AddDbContext<DataContext>(options =>
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 
 var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"] ?? throw new InvalidOperationException("JWT Secret Key not found!"));
+
+
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -210,6 +213,13 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Images")),
+    RequestPath = "/Images"
+});
 
 // Authentication must come before Authorization
 app.UseAuthentication();

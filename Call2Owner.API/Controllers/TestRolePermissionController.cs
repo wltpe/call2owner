@@ -60,7 +60,6 @@ namespace Call2Owner.Controllers
                 LastName = "model.LastName",
                 Email = "caddycoder@gmail.com",
                 PhoneNumber = "9023937303",
-                RolesId = 1,
                 VerificationCode = "123-123-123",
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,

@@ -83,13 +83,19 @@ public partial class User
 
     public string? CreatedBy { get; set; }
 
-    public int RolesId { get; set; }
-
     public string? UpdatedBy { get; set; }
 
     public DateTime? VerificationCodeGenerationTime { get; set; }
 
     public DateTime? VerificationCodeValidationTime { get; set; }
+
+    public bool? IsVerified { get; set; }
+
+    public string? PasswordHash { get; set; }
+
+    public string? VerificationCode { get; set; }
+
+    public int? RolesId { get; set; }
 
     public virtual ICollection<AdminWallet> AdminWallets { get; set; } = new List<AdminWallet>();
 
@@ -107,7 +113,7 @@ public partial class User
 
     public virtual ICollection<Resident> Residents { get; set; } = new List<Resident>();
 
-    public virtual Role Roles { get; set; } = null!;
+    public virtual Role? Roles { get; set; }
 
     public virtual ICollection<SocietyUser> SocietyUsers { get; set; } = new List<SocietyUser>();
 

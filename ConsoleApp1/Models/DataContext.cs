@@ -17,8 +17,6 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<AdminWallet> AdminWallets { get; set; }
 
-    public virtual DbSet<AggregatedCounter> AggregatedCounters { get; set; }
-
     public virtual DbSet<AppConfig> AppConfigs { get; set; }
 
     public virtual DbSet<Beneficiary> Beneficiaries { get; set; }
@@ -33,8 +31,6 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<Config> Configs { get; set; }
 
-    public virtual DbSet<Counter> Counters { get; set; }
-
     public virtual DbSet<Country> Countries { get; set; }
 
     public virtual DbSet<CustomerWallet> CustomerWallets { get; set; }
@@ -48,16 +44,6 @@ public partial class DataContext : DbContext
     public virtual DbSet<ErrorCode> ErrorCodes { get; set; }
 
     public virtual DbSet<GatewayTransaction> GatewayTransactions { get; set; }
-
-    public virtual DbSet<Hash> Hashes { get; set; }
-
-    public virtual DbSet<Job> Jobs { get; set; }
-
-    public virtual DbSet<JobParameter> JobParameters { get; set; }
-
-    public virtual DbSet<JobQueue> JobQueues { get; set; }
-
-    public virtual DbSet<List> Lists { get; set; }
 
     public virtual DbSet<LogMessage> LogMessages { get; set; }
 
@@ -113,15 +99,9 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<RoleClaim> RoleClaims { get; set; }
 
-    public virtual DbSet<Schema> Schemas { get; set; }
-
-    public virtual DbSet<Server> Servers { get; set; }
-
     public virtual DbSet<ServiceCategory> ServiceCategories { get; set; }
 
     public virtual DbSet<ServiceType> ServiceTypes { get; set; }
-
-    public virtual DbSet<Set> Sets { get; set; }
 
     public virtual DbSet<Setting> Settings { get; set; }
 
@@ -138,8 +118,6 @@ public partial class DataContext : DbContext
     public virtual DbSet<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; }
 
     public virtual DbSet<State> States { get; set; }
-
-    public virtual DbSet<State1> States1 { get; set; }
 
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
 
@@ -165,7 +143,7 @@ public partial class DataContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=103.67.182.216,2499;Initial Catalog=call2owner-dev;User ID=sa;Password=j3x0rGPI1ozN;Trust Server Certificate=True;MultipleActiveResultSets=true");
+        => optionsBuilder.UseSqlServer("Data Source=103.67.182.216,2499;Initial Catalog=call2owner-bkup-3rd;User ID=sa;Password=j3x0rGPI1ozN;Trust Server Certificate=True;MultipleActiveResultSets=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -186,18 +164,6 @@ public partial class DataContext : DbContext
             entity.HasOne(d => d.Provider).WithMany(p => p.AdminWallets).HasForeignKey(d => d.ProviderId);
 
             entity.HasOne(d => d.UserNameNavigation).WithMany(p => p.AdminWallets).HasForeignKey(d => d.UserName);
-        });
-
-        modelBuilder.Entity<AggregatedCounter>(entity =>
-        {
-            entity.HasKey(e => e.Key).HasName("PK_HangFire_CounterAggregated");
-
-            entity.ToTable("AggregatedCounter", "HangFire");
-
-            entity.HasIndex(e => e.ExpireAt, "IX_HangFire_AggregatedCounter_ExpireAt").HasFilter("([ExpireAt] IS NOT NULL)");
-
-            entity.Property(e => e.Key).HasMaxLength(100);
-            entity.Property(e => e.ExpireAt).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<AppConfig>(entity =>
@@ -282,17 +248,6 @@ public partial class DataContext : DbContext
         {
             entity.Property(e => e.ConfigKey).HasMaxLength(200);
             entity.Property(e => e.ConfigValue).HasMaxLength(200);
-        });
-
-        modelBuilder.Entity<Counter>(entity =>
-        {
-            entity.HasKey(e => new { e.Key, e.Id }).HasName("PK_HangFire_Counter");
-
-            entity.ToTable("Counter", "HangFire");
-
-            entity.Property(e => e.Key).HasMaxLength(100);
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
-            entity.Property(e => e.ExpireAt).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<Country>(entity =>
@@ -380,70 +335,6 @@ public partial class DataContext : DbContext
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.UserNameNavigation).WithMany(p => p.GatewayTransactions).HasForeignKey(d => d.UserName);
-        });
-
-        modelBuilder.Entity<Hash>(entity =>
-        {
-            entity.HasKey(e => new { e.Key, e.Field }).HasName("PK_HangFire_Hash");
-
-            entity.ToTable("Hash", "HangFire");
-
-            entity.HasIndex(e => e.ExpireAt, "IX_HangFire_Hash_ExpireAt").HasFilter("([ExpireAt] IS NOT NULL)");
-
-            entity.Property(e => e.Key).HasMaxLength(100);
-            entity.Property(e => e.Field).HasMaxLength(100);
-        });
-
-        modelBuilder.Entity<Job>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_HangFire_Job");
-
-            entity.ToTable("Job", "HangFire");
-
-            entity.HasIndex(e => e.ExpireAt, "IX_HangFire_Job_ExpireAt").HasFilter("([ExpireAt] IS NOT NULL)");
-
-            entity.HasIndex(e => e.StateName, "IX_HangFire_Job_StateName").HasFilter("([StateName] IS NOT NULL)");
-
-            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
-            entity.Property(e => e.ExpireAt).HasColumnType("datetime");
-            entity.Property(e => e.StateName).HasMaxLength(20);
-        });
-
-        modelBuilder.Entity<JobParameter>(entity =>
-        {
-            entity.HasKey(e => new { e.JobId, e.Name }).HasName("PK_HangFire_JobParameter");
-
-            entity.ToTable("JobParameter", "HangFire");
-
-            entity.Property(e => e.Name).HasMaxLength(40);
-
-            entity.HasOne(d => d.Job).WithMany(p => p.JobParameters)
-                .HasForeignKey(d => d.JobId)
-                .HasConstraintName("FK_HangFire_JobParameter_Job");
-        });
-
-        modelBuilder.Entity<JobQueue>(entity =>
-        {
-            entity.HasKey(e => new { e.Queue, e.Id }).HasName("PK_HangFire_JobQueue");
-
-            entity.ToTable("JobQueue", "HangFire");
-
-            entity.Property(e => e.Queue).HasMaxLength(50);
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
-            entity.Property(e => e.FetchedAt).HasColumnType("datetime");
-        });
-
-        modelBuilder.Entity<List>(entity =>
-        {
-            entity.HasKey(e => new { e.Key, e.Id }).HasName("PK_HangFire_List");
-
-            entity.ToTable("List", "HangFire");
-
-            entity.HasIndex(e => e.ExpireAt, "IX_HangFire_List_ExpireAt").HasFilter("([ExpireAt] IS NOT NULL)");
-
-            entity.Property(e => e.Key).HasMaxLength(100);
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
-            entity.Property(e => e.ExpireAt).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<LogMessage>(entity =>
@@ -939,27 +830,6 @@ public partial class DataContext : DbContext
             entity.HasOne(d => d.Role).WithMany(p => p.RoleClaims).HasForeignKey(d => d.RoleId);
         });
 
-        modelBuilder.Entity<Schema>(entity =>
-        {
-            entity.HasKey(e => e.Version).HasName("PK_HangFire_Schema");
-
-            entity.ToTable("Schema", "HangFire");
-
-            entity.Property(e => e.Version).ValueGeneratedNever();
-        });
-
-        modelBuilder.Entity<Server>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_HangFire_Server");
-
-            entity.ToTable("Server", "HangFire");
-
-            entity.HasIndex(e => e.LastHeartbeat, "IX_HangFire_Server_LastHeartbeat");
-
-            entity.Property(e => e.Id).HasMaxLength(200);
-            entity.Property(e => e.LastHeartbeat).HasColumnType("datetime");
-        });
-
         modelBuilder.Entity<ServiceCategory>(entity =>
         {
             entity.Property(e => e.Code).HasMaxLength(50);
@@ -984,21 +854,6 @@ public partial class DataContext : DbContext
             entity.HasOne(d => d.ServiceCategory).WithMany(p => p.ServiceTypes)
                 .HasForeignKey(d => d.ServiceCategoryId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
-        });
-
-        modelBuilder.Entity<Set>(entity =>
-        {
-            entity.HasKey(e => new { e.Key, e.Value }).HasName("PK_HangFire_Set");
-
-            entity.ToTable("Set", "HangFire");
-
-            entity.HasIndex(e => e.ExpireAt, "IX_HangFire_Set_ExpireAt").HasFilter("([ExpireAt] IS NOT NULL)");
-
-            entity.HasIndex(e => new { e.Key, e.Score }, "IX_HangFire_Set_Score");
-
-            entity.Property(e => e.Key).HasMaxLength(100);
-            entity.Property(e => e.Value).HasMaxLength(256);
-            entity.Property(e => e.ExpireAt).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<Setting>(entity =>
@@ -1154,24 +1009,6 @@ public partial class DataContext : DbContext
                 .HasConstraintName("FK_State_Country");
         });
 
-        modelBuilder.Entity<State1>(entity =>
-        {
-            entity.HasKey(e => new { e.JobId, e.Id }).HasName("PK_HangFire_State");
-
-            entity.ToTable("State", "HangFire");
-
-            entity.HasIndex(e => e.CreatedAt, "IX_HangFire_State_CreatedAt");
-
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
-            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
-            entity.Property(e => e.Name).HasMaxLength(20);
-            entity.Property(e => e.Reason).HasMaxLength(100);
-
-            entity.HasOne(d => d.Job).WithMany(p => p.State1s)
-                .HasForeignKey(d => d.JobId)
-                .HasConstraintName("FK_HangFire_State_Job");
-        });
-
         modelBuilder.Entity<SubscriptionPlan>(entity =>
         {
             entity.ToTable("SubscriptionPlan");
@@ -1207,14 +1044,10 @@ public partial class DataContext : DbContext
         {
             entity.HasKey(e => e.UserName);
 
-            entity.HasIndex(e => e.RolesId, "IX_Users_RolesId");
-
             entity.Property(e => e.UserName).ValueGeneratedNever();
             entity.Property(e => e.AccessToken).HasMaxLength(1000);
             entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
             entity.Property(e => e.DeletedBy).HasMaxLength(255);
-            entity.Property(e => e.DeletedOn).HasColumnType("datetime");
             entity.Property(e => e.Dob).HasColumnName("DOB");
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.FirstName).HasMaxLength(200);
@@ -1223,16 +1056,12 @@ public partial class DataContext : DbContext
             entity.Property(e => e.Otp)
                 .HasMaxLength(10)
                 .HasColumnName("OTP");
-            entity.Property(e => e.OtpExpireTime).HasColumnType("datetime");
-            entity.Property(e => e.OtpValidatedOn).HasColumnType("datetime");
             entity.Property(e => e.PhoneNumber).HasMaxLength(15);
             entity.Property(e => e.Prefix).HasMaxLength(200);
             entity.Property(e => e.RefreshToken).HasMaxLength(1000);
-            entity.Property(e => e.RefreshTokenExpireTime).HasColumnType("datetime");
-            entity.Property(e => e.ResendOtpTime).HasColumnType("datetime");
             entity.Property(e => e.Role).HasMaxLength(100);
+            entity.Property(e => e.RolesId).HasDefaultValue(0);
             entity.Property(e => e.UpdatedBy).HasMaxLength(255);
-            entity.Property(e => e.UpdatedOn).HasColumnType("datetime");
             entity.Property(e => e.VerificationCodeGenerationTime).HasColumnType("datetime");
             entity.Property(e => e.VerificationCodeValidationTime).HasColumnType("datetime");
 

@@ -50,4 +50,5 @@ public partial class SocietyUser
     public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
 
     public virtual User User { get; set; } = null!;
+    public virtual ICollection<SocietyUserProfile> SocietyUserProfile { get; set; } = new List<SocietyUserProfile>();
 }

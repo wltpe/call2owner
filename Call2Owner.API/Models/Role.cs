@@ -21,3 +21,4 @@ public partial class Role
 
     public virtual ICollection<User> User { get; set; } = new List<User>();
 }
+

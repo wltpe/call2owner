@@ -78,9 +78,8 @@ namespace Call2Owner.DTO
         public Guid Id { get; set; }
 
         public Guid UserId { get; set; }
-
         public Guid? SocietyFlatId { get; set; }
-
+        public string? Address { get; set; }
         public int? EntityTypeDetailId { get; set; }
 
         public bool IsDocumentUploaded { get; set; }
@@ -577,4 +576,157 @@ namespace Call2Owner.DTO
         public DateTime? DeletedOn { get; set; }
 
     }
+
+    public class AddResidentFrequentEntriesDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string EntryType { get; set; }
+
+        public string FrequentlyType { get; set; }
+
+        public string? AllowEntryInNext { get; set; }
+
+        public DateOnly? EntryDate { get; set; }
+
+        public bool? IsSurpriseDelivery { get; set; }
+
+        public bool? IsLeaveAtGate { get; set; }
+
+        public TimeOnly? EntryTimeStart { get; set; }
+
+        public TimeOnly? EntryTimeEnd { get; set; }
+
+        public string? VehicleNo { get; set; }
+
+        public int? CabCompanyId { get; set; }
+
+        public int? DeliveryCompanyId { get; set; }
+
+        public int? VisitingHelpCategoryId { get; set; }
+
+        public string? DaysOfWeek { get; set; }
+
+        public string? Validity { get; set; }
+
+        public string? EntriesPerDay { get; set; }
+
+        public string? UniqueEntryCode { get; set; }
+
+        public bool? IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? VisitingHelpName { get; set; }
+    }
+
+    public class ResidentFrequentEntryDto
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string EntryType { get; set; } = null!; // Cab, Delivery, Visiting Help
+
+        public string FrequentlyType { get; set; } = null!; // Once or Frequently
+
+        public string? AllowEntryInNext { get; set; }
+
+        public DateOnly? EntryDate { get; set; }
+
+        public bool? IsSurpriseDelivery { get; set; }
+
+        public bool? IsLeaveAtGate { get; set; }
+
+        public TimeOnly? EntryTimeStart { get; set; }
+
+        public TimeOnly? EntryTimeEnd { get; set; }
+
+        public string? VehicleNo { get; set; }
+
+        public int? CabCompanyId { get; set; }
+
+        public string? CabCompanyName { get; set; }
+
+        public int? DeliveryCompanyId { get; set; }
+
+        public string? DeliveryCompanyName { get; set; }
+
+        public int? VisitingHelpCategoryId { get; set; }
+
+        public string? VisitingHelpCategoryName { get; set; }
+
+        public string? DaysOfWeek { get; set; }
+
+        public string? Validity { get; set; }
+
+        public string? EntriesPerDay { get; set; }
+
+        public string? UniqueEntryCode { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? VisitingHelpName { get; set; }
+    }
+
+    public class UpdateResidentFrequentEntryDto
+    {
+        public Guid Id { get; set; } // Required to identify the record to update
+
+        public string? EntryType { get; set; } // Cab, Delivery, Visiting Help
+
+        public string? FrequentlyType { get; set; } // Once or Frequently
+
+        public string? AllowEntryInNext { get; set; }
+
+        public DateOnly? EntryDate { get; set; }
+
+        public bool? IsSurpriseDelivery { get; set; }
+
+        public bool? IsLeaveAtGate { get; set; }
+
+        public TimeOnly? EntryTimeStart { get; set; }
+
+        public TimeOnly? EntryTimeEnd { get; set; }
+
+        public string? VehicleNo { get; set; }
+
+        public int? CabCompanyId { get; set; }
+
+        public int? DeliveryCompanyId { get; set; }
+
+        public int? VisitingHelpCategoryId { get; set; }
+
+        public string? DaysOfWeek { get; set; }
+
+        public string? Validity { get; set; }
+
+        public string? EntriesPerDay { get; set; }
+
+        public string? VisitingHelpName { get; set; }
+
+        public bool? IsActive { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+    }
+
 }

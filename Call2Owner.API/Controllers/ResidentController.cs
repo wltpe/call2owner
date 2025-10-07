@@ -5,6 +5,7 @@ using Call2Owner.Models;
 using Call2Owner.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -17,8 +18,12 @@ using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using RestSharp;
 using Swashbuckle.AspNetCore.Annotations;
 using System;
+using System.Buffers;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Drawing;
+using System.Drawing.Printing;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Mime;
@@ -32,6 +37,10 @@ using System.Text.Json.Serialization;
 using Utilities;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static System.Net.WebRequestMethods;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Call2Owner.Controllers
 {
@@ -64,68 +73,88 @@ namespace Call2Owner.Controllers
         }
 
         #region CommonAPIs
-        [Authorize(Policy = Utilities.Module.Resident)]
+        //[Authorize(Policy = Utilities.Module.Resident)]
         //[Authorize(Policy = Utilities.Permission.Add)]
         [Authorize]
         [HttpPost("resident-self-register")]
-        public async Task<IActionResult> SelfRegisterResident([FromBody] UserResidentDto dto)
+        public async Task<IActionResult> SelfRegisterResident()
         {
             try
             {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-            if (dto == null || (dto.Username == null))
-            {
-                return BadRequest("Invalid user");
-            }
-
-
-            var existingUser = await _context.User
-                                             .FirstOrDefaultAsync(u => u.UserName == dto.Username && u.IsActive == true);
-            if (existingUser == null)
-            {
-                return Conflict(new { message = "Unable to register for society." });
-            }
-
-            if (existingUser != null)
-            {
-
-                var existingResident = await _context.Resident
-                                           .FirstOrDefaultAsync(u => u.UserId == existingUser.UserName);
-
-                    if (existingResident != null && existingResident.UserId != null)
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
                     {
-                        ResidentDto returnobj = new ResidentDto();
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
 
-                        returnobj.Id = existingResident.Id;
-                        returnobj.UserId = existingResident.UserId;
-                        returnobj.SocietyFlatId = existingResident.SocietyFlatId;
-                        returnobj.EntityTypeDetailId = existingResident.EntityTypeDetailId;
-                        returnobj.IsDocumentUploaded = existingResident.IsDocumentUploaded;
-                        returnobj.ResidentCode = existingResident.ResidentCode;
-                        returnobj.IsApproved = existingResident.IsApproved;
-                        returnobj.ApprovedBy = existingResident.ApprovedBy;
-                        returnobj.ApprovedOn = existingResident.ApprovedOn;
-                        returnobj.IsActive = existingResident.IsActive;
-                        returnobj.CreatedBy = existingResident.CreatedBy;
-                        returnobj.CreatedOn = existingResident.CreatedOn;
-                        returnobj.UpdatedBy = existingResident.UpdatedBy;
-                        returnobj.UpdatedOn = existingResident.UpdatedOn;
-                        returnobj.IsDeleted = existingResident.IsDeleted;
-                        returnobj.DeletedBy = existingResident.DeletedBy;
-                        returnobj.DeletedOn = existingResident.DeletedOn;
-                        returnobj.DetailJson = existingResident.DetailJson;
+                // Fetch user by primary key and active status
+                var existingUser = await _context.User
+                    .Include(u => u.Roles)
+                    .FirstOrDefaultAsync(u => u.UserName.ToString() == currentUserId && u.IsActive);
 
-                        return Conflict(new { statusCode = StatusCodes.Status409Conflict, message = "Resident already registered.", data = returnobj });
-                    }
+                if (existingUser == null)
+                {
+                    return Conflict(new { message = "Unable to register for society." });
+                }
+
+                // Check if user already has Resident role
+                var role = await _context.Role.AsNoTracking()
+                                .FirstOrDefaultAsync(u => u.RoleName == "Resident");
+
+                if (role==null)
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Unable to access society."
+                    });
+                }
+
+                var roleDto = _mapper.Map<RoleDto>(role);
+
+                if (roleDto == null)
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Unable to access society."
+                    });
+                }
+
+                if (existingUser.Roles==null)
+                {
+                    existingUser.Roles = role;
+                    existingUser.UpdatedOn = DateTime.UtcNow;
+
+                    _context.User.Update(existingUser);
+                    await _context.SaveChangesAsync();
+                }
 
 
+                // Check if resident already registsered
+                var existingResident = await _context.Resident
+                    .FirstOrDefaultAsync(r => r.UserId == existingUser.UserName);
 
+                if (existingResident != null)
+                {
+                    return Ok(new
+                    {
+                        statusCode = StatusCodes.Status200OK,
+                        message = "Resident already registered."
+                    });
+                }
 
-                        OTPGenerator otpGenerator = new OTPGenerator();
+                // Generate resident code
+                var otpGenerator = new OTPGenerator();
                 string residentCode = otpGenerator.GenerateOTP();
 
-                // Add User as Resident
-                var AddResident = new Resident
+                // Create new Resident record
+                var newResident = new Resident
                 {
                     Id = Guid.NewGuid(),
                     UserId = existingUser.UserName,
@@ -137,57 +166,144 @@ namespace Call2Owner.Controllers
                     CreatedOn = DateTime.UtcNow
                 };
 
-             var obj = await _context.Resident.AddAsync(AddResident);
+                await _context.Resident.AddAsync(newResident);
                 await _context.SaveChangesAsync();
 
-                    CreateResidentDto returnAddResident = new CreateResidentDto
-                    {
-                         Id = obj.Entity.Id,
-                         UserId = obj.Entity.UserId,
-                         SocietyFlatId = obj.Entity.SocietyFlatId,
-                         EntityTypeDetailId =obj.Entity.EntityTypeDetailId,
-                         IsDocumentUploaded = obj.Entity.IsDocumentUploaded,
-                         ResidentCode = obj.Entity.ResidentCode,
-                         IsApproved = obj.Entity.IsApproved,
-                         ApprovedBy = obj.Entity.ApprovedBy,
-                         ApprovedOn = obj.Entity.ApprovedOn,
-                         IsActive = obj.Entity.IsActive,
-                         CreatedBy = obj.Entity.CreatedBy,
-                         CreatedOn = obj.Entity.CreatedOn,
-                         UpdatedBy = obj.Entity.UpdatedBy,
-                         UpdatedOn = obj.Entity.UpdatedOn,
-                         IsDeleted = obj.Entity.IsDeleted,
-                         DeletedBy = obj.Entity.DeletedBy,
-                         DeletedOn = obj.Entity.DeletedOn,
-                         DetailJson = obj.Entity.DetailJson
-                    };
-
-                    return Ok(new
+                return Ok(new
                 {
                     statusCode = StatusCodes.Status200OK,
-                    message = "Resident created successfully!",
-                    data = returnAddResident
-                    });
+                    message = "Resident created successfully!"
+                });
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest("Invalid user");
+                return BadRequest(new
+                {
+                    statusCode = StatusCodes.Status400BadRequest,
+                    message = "An error occurred while registering the resident."
+                });
             }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("resident-profile")]
+        public async Task<IActionResult> ResidentProfile()
+        {
+            try
+            {
+                  var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+
+                var residentprofile = await _context.Resident
+                                                 .FirstOrDefaultAsync(u => u.UserId.ToString() == currentUserId);
+                if (residentprofile == null)
+                {
+                    return NotFound(new { statusCode = StatusCodes.Status404NotFound, message = "Resident not found." });
+                }
+                else
+                {
+                    string fullAddress = "";
+
+                    // Fetch flat record
+                    var societyFlat = residentprofile.SocietyFlatId != null
+                        ? await _context.SocietyFlat.FirstOrDefaultAsync(f => f.Id == residentprofile.SocietyFlatId)
+                        : null;
+
+                    // Fetch building record
+                    var societyBuilding = societyFlat != null
+                        ? await _context.SocietyBuilding.FirstOrDefaultAsync(b => b.Id == societyFlat.SocietyBuildingId)
+                        : null;
+
+                    // Fetch society record
+                    var society = societyBuilding != null
+                        ? await _context.Society.FirstOrDefaultAsync(s => s.Id == societyBuilding.SocietyId)
+                        : null;
+
+                    // Fetch city record
+                    var city = society != null
+                        ? await _context.City.FirstOrDefaultAsync(c => c.Id == society.CityId)
+                        : null;
+
+                    // Fetch state record
+                    var state = city != null
+                        ? await _context.State.FirstOrDefaultAsync(s => s.Id == city.StateId)
+                        : null;
+
+                    // Fetch country record
+                    var country = state != null
+                        ? await _context.Country.FirstOrDefaultAsync(c => c.Id == state.CountryId)
+                        : null;
+
+
+                    var addressParts = new[]
+                                               {
+                                                societyFlat?.Name,
+                                                societyBuilding?.Name,
+                                                society?.Name,
+                                                city?.Name,
+                                                state?.Name,
+                                                country?.Name
+                                            };
+
+
+                    ResidentDto returnobj = new ResidentDto();
+
+                        returnobj.Id = residentprofile.Id;
+                        returnobj.UserId = residentprofile.UserId;
+                    returnobj.Address = string.Join(",", addressParts.Where(part => !string.IsNullOrWhiteSpace(part)));
+                    returnobj.EntityTypeDetailId = residentprofile.EntityTypeDetailId;
+                        returnobj.IsDocumentUploaded = residentprofile.IsDocumentUploaded;
+                        returnobj.ResidentCode = residentprofile.ResidentCode;
+                        returnobj.IsApproved = residentprofile.IsApproved;
+                        returnobj.ApprovedBy = residentprofile.ApprovedBy;
+                        returnobj.ApprovedOn = residentprofile.ApprovedOn;
+                        returnobj.IsActive = residentprofile.IsActive;
+                        returnobj.CreatedBy = residentprofile.CreatedBy;
+                        returnobj.CreatedOn = residentprofile.CreatedOn;
+                        returnobj.UpdatedBy = residentprofile.UpdatedBy;
+                        returnobj.UpdatedOn = residentprofile.UpdatedOn;
+                        returnobj.IsDeleted = residentprofile.IsDeleted;
+                        returnobj.DeletedBy = residentprofile.DeletedBy;
+                        returnobj.DeletedOn = residentprofile.DeletedOn;
+                        returnobj.DetailJson = residentprofile.DetailJson;
+
+                        return Ok(new { statusCode = StatusCodes.Status200OK, message = "Resident profile.", data = returnobj });
+                    }
 
             }
             catch (Exception ex)
             {
-                return BadRequest("Invalid user");
+                return BadRequest("Invalid resident");
             }
 
         }
 
-
-        //[Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllCountry)]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-country")]
         public async Task<ActionResult<IEnumerable<CountryDto>>> GetAllCountry()
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var countries = await _context.Country
          .Where(s => s.IsDeleted != true && s.IsActive == true)
          .OrderBy(s => s.DisplayOrder)
@@ -196,11 +312,22 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CountryDto>>(countries));
         }
 
-        //[Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllStateByCountryId)]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-state-by-country-id")]
         public async Task<ActionResult<IEnumerable<StateDto>>> GetAllStateByCountryId(int CountryId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var states = await _context.State
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.CountryId == CountryId)
                 .OrderBy(s => s.DisplayOrder)
@@ -209,11 +336,22 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<StateDto>>(states));
         }
 
-        //[Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllCityByStateId)]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-city-by-state-id")]
         public async Task<ActionResult<IEnumerable<CityDto>>> GetAllCityByStateId(int StateId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var cities = await _context.City
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.StateId == StateId)
                 .OrderBy(s => s.DisplayOrder)
@@ -222,11 +360,22 @@ namespace Call2Owner.Controllers
             return Ok(_mapper.Map<List<CityDto>>(cities));
         }
 
-        //[Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllSocietyByCityId)]
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-society-by-city-id")]
         public async Task<ActionResult<IEnumerable<SocietyDto>>> GetAllSocietyByCityId(int CityId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var societies = await _context.Society
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.CityId == CityId && s.IsApproved == true)
                 .OrderBy(s => s.Name)
@@ -236,10 +385,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllBuildingBySocietyId)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-building-by-society-id")]
         public async Task<ActionResult<IEnumerable<SocietyBuildingDTO>>> GetAllBuildingBySocietyId(Guid SocietyId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var societyBuildings = await _context.SocietyBuilding
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyId == SocietyId)
                 .OrderBy(s => s.Name)
@@ -249,10 +409,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllFlatBySocietyBuildingId)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-flats-by-society-building-id")]
         public async Task<ActionResult<IEnumerable<SocietyFlatDTO>>> GetAllFlatsBySocietyBuildingId(Guid SocietyBuildingId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var societyBuildingFlats = await _context.SocietyFlat
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.SocietyBuildingId == SocietyBuildingId)
                 .OrderBy(s => s.Name)
@@ -262,10 +433,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllResidentTypes)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-resident-types")]
         public async Task<IActionResult> GetAllResidentTypes(int EntityTypeId)
         {
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
             var result = await _context.EntityTypeDetail
        .Where(d => d.IsDeleted != true && d.IsActive == true && d.EntityTypeId == EntityTypeId)
        .OrderBy(d => d.Id)
@@ -313,13 +495,22 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.UpdateResidentType)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpPost("update-resident-selected-type")]
         public async Task<IActionResult> UpdateResidentSelectedType([FromForm] SelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
 
                 var mismatchMessages = new List<MismatchOutput>();
 
@@ -386,28 +577,35 @@ namespace Call2Owner.Controllers
 
                 if (!string.IsNullOrWhiteSpace(selectedRecords.fileName))
                 {
-                extensionFromFileName = Path.GetExtension(selectedRecords.fileName)?.TrimStart('.');
+                extensionFromFileName = Path.GetExtension(selectedRecords.file.FileName)?.TrimStart('.');
                 }
-                
+
 
 
                 bool matchingDetail = fullResponse.Any(entity =>
-                                 entity.DetailJson.Any(detailItem =>
-                                     detailItem.Details.Any(detail =>
-                                         detail.fieldText == selectedRecords.fieldText &&
-                                         detail.fieldId == selectedRecords.fieldId &&
-                                         detail.fieldName == selectedRecords.fieldName &&
-                                         detail.recordType == selectedRecords.recordType &&
-                                         (
-                                             (detail.type == null && selectedRecords.type == null) ||
-                                             (detail.type != null && selectedRecords.type != null &&
-                                              detail.type.Contains(selectedRecords.type) &&
-                                              detail.type.Contains(extensionFromFile) &&
-                                              detail.type.Contains(extensionFromFileName)) // ✅ works now
-                                         )
-                                     )
-                                 )
-                                );
+                {
+                    return entity.DetailJson.Any(detailItem =>
+                    {
+                        return detailItem.Details.Any(detail =>
+                        {
+                            bool isBasicMatch =
+                                detail.fieldText == selectedRecords.fieldText &&
+                                detail.fieldId == selectedRecords.fieldId &&
+                                detail.fieldName == selectedRecords.fieldName &&
+                                detail.recordType == selectedRecords.recordType;
+
+                            bool isTypeMatch =
+                                (detail.type == null && selectedRecords.type == null) ||
+                                (detail.type != null && selectedRecords.type != null &&
+                                 detail.type.Contains(selectedRecords.type) &&
+                                 detail.type.Contains(extensionFromFile.ToLower()) &&
+                                 detail.type.Contains(extensionFromFileName.ToLower()));
+
+                            return isBasicMatch && isTypeMatch;
+                        });
+                    });
+                });
+
 
                 // Try to find a "close" match by same fieldId or fieldText for better reporting
                 var possible = fullResponse
@@ -545,7 +743,8 @@ namespace Call2Owner.Controllers
                     UpdateResident updateResident = new UpdateResident();
 
                         updateResident.Id = Guid.Parse(currentUserId);
-                        updateResident.UpdatedOn = DateTime.UtcNow;
+                    updateResident.SocietyFlatId = obj.societyFlatId;
+                    updateResident.UpdatedOn = DateTime.UtcNow;
                         updateResident.UpdatedBy = currentUserId;
                     updateResident.DetailJson = json;
 
@@ -581,18 +780,21 @@ namespace Call2Owner.Controllers
         #region FamilyAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-resident-household-family-form")]
         public async Task<IActionResult> GetResidentHouseholdFamilyForm()
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityTypeDetail);
@@ -657,18 +859,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("add-resident-household-family")]
         public async Task<IActionResult> AddResidentHouseholdFamily([FromForm] AddFamilySelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var mismatchMessages = new List<MismatchOutput>();
@@ -764,12 +969,12 @@ namespace Call2Owner.Controllers
                     if (obj.file is not null)
                     {
                         extensionFromFile = Path.GetExtension(ContentDispositionHeaderValue.Parse(obj.file.ContentDisposition)
-                                            .FileName.ToString().Trim('"'))?.TrimStart('.');
+                                            .FileName.ToString().Trim('"'))?.TrimStart('.').ToLower();
                     }
 
                     if (!string.IsNullOrWhiteSpace(obj.fileName))
                     {
-                        extensionFromFileName = Path.GetExtension(obj.fileName)?.TrimStart('.');
+                        extensionFromFileName = Path.GetExtension(obj.fileName)?.TrimStart('.').ToLower();
                     }
 
                     bool isValidExtension = entityTypeDetails.FamilyType.Adult
@@ -856,21 +1061,24 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdFamily)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-resident-household-family")]
         public async Task<ActionResult<IEnumerable<ResidentFamilyDto>>> GetAllResidentHouseholdFamily()
         {
             try
             {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-            var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
 
-            if (currentUserId == "0")
-            {
-                return NotFound(new { message = "Invalid or Expired Token." });
-            }
-
-            var getResidentByUserId = await _context.Resident
+                var getResidentByUserId = await _context.Resident
                 .Where(s => s.IsDeleted != true && s.IsActive == true && s.UserId == Guid.Parse(currentUserId))
                 .Select(s => s.Id)
                 .FirstOrDefaultAsync();
@@ -900,18 +1108,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdFamilyById)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpPost("update-resident-household-family-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdFamilyById([FromForm] UpdateFamilySelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getFamilyById = await _context.ResidentFamily
@@ -1017,12 +1228,12 @@ namespace Call2Owner.Controllers
                     if (obj.file is not null)
                     {
                         extensionFromFile = Path.GetExtension(ContentDispositionHeaderValue.Parse(obj.file.ContentDisposition)
-                                            .FileName.ToString().Trim('"'))?.TrimStart('.');
+                                            .FileName.ToString().Trim('"'))?.TrimStart('.').ToLower();
 
 
                         if (!string.IsNullOrWhiteSpace(obj.fileName))
                         {
-                            extensionFromFileName = Path.GetExtension(obj.fileName)?.TrimStart('.');
+                            extensionFromFileName = Path.GetExtension(obj.fileName)?.TrimStart('.').ToLower();
                         }
 
                         bool isValidExtension = entityTypeDetails.FamilyType.Adult
@@ -1117,17 +1328,21 @@ namespace Call2Owner.Controllers
         #region PetAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdPetForm)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-resident-household-pet-form")]
         public async Task<IActionResult> GetResidentHouseholdPetForm()
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityTypeDetail);
@@ -1201,17 +1416,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdPet)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("add-resident-household-pet")]
         public async Task<IActionResult> AddResidentHouseholdPet([FromForm] PetRequest petDataJson)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityTypeDetail);
@@ -1410,18 +1629,22 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdPet)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-resident-household-pet")]
         public async Task<ActionResult<IEnumerable<ResidentPetDto>>> GetAllResidentHouseholdPet()
         {
             try
             {
 
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getResidentByUserId = await _context.Resident
@@ -1454,18 +1677,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdPetById)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpPost("update-resident-household-pet-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdPetById([FromForm] UpdatePetSelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getPetById = await _context.ResidentPet
@@ -1590,18 +1816,21 @@ namespace Call2Owner.Controllers
         #region VehicleAPIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdVehicleForm)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-resident-household-vehicle-form")]
         public async Task<IActionResult> GetResidentHouseholdVehicleForm()
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityTypeDetail);
@@ -1656,17 +1885,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdVehicle)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("add-resident-household-vehicle")]
         public async Task<IActionResult> AddResidentHouseholdVehicle([FromForm] VehicleRequest vehicleData)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityType);
@@ -1821,18 +2054,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-resident-household-vehicle")]
         public async Task<ActionResult<IEnumerable<ResidentVehicleDto>>> GetAllResidentHouseholdVehicle()
         {
             try
             {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getResidentByUserId = await _context.Resident
@@ -1865,18 +2101,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpPost("update-resident-household-vehicle-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdVehicleById([FromForm] UpdateVehicleSelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getVehicleById = await _context.ResidentVehicle
@@ -1986,17 +2225,21 @@ namespace Call2Owner.Controllers
 
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-resident-household-frequent-guests-form")]
         public async Task<IActionResult> GetResidentHouseholdFrequentGuestsForm()
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 Type type = typeof(Utilities.EntityTypeDetail);
@@ -2043,21 +2286,22 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
+        [Authorize(Policy = Utilities.Permission.Add)]
         [HttpPost("add-resident-household-frequent-guests")]
         public async Task<IActionResult> AddResidentHouseholdFrequentGuests([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
-
-
 
                 AddResidentFrequentGuests addFrequentGuests = new AddResidentFrequentGuests();
 
@@ -2086,16 +2330,23 @@ namespace Call2Owner.Controllers
                 if (obj.GuestType == "Once")
                 {
 
-                    if (!obj.IsPrivateEntry== true || !obj.IsPrivateEntry == false)
-                        return NotFound(new { message = "Is Private Entry?" });
-                    
+                    if ((!obj.IsPrivateEntry== true) && (!obj.IsPrivateEntry == false))
+                        return NotFound(new { message = "Is Private Entry required?" });
 
-                    if (!obj.StartDate.HasValue)
+
+                    if (string.IsNullOrWhiteSpace(obj.StartDate))
                         return NotFound(new { message = "Start date required." });
-                    
 
-                    if (!obj.StartingFrom.HasValue)
-                        return NotFound(new { message = "Starting date required." });
+                    if (!CheckValidDate(obj.StartDate))
+                        return NotFound(new { message = "Start date must be in 'dd-MM-yyyy' format." });
+                  
+
+                    if (string.IsNullOrWhiteSpace(obj.StartingFrom))
+                        return NotFound(new { message = "Starting time required." });
+
+                    if (!CheckValidTime(obj.StartingFrom))
+                        return NotFound(new { message = "Starting time must be in 'HH:mm' format." });
+               
 
                     string[] ValidFor = ["1 Hour","2 Hours","4 Hours","8 Hours","12 Hours","24 Hours"];
 
@@ -2106,8 +2357,9 @@ namespace Call2Owner.Controllers
 
                  
                     addFrequentGuests.IsPrivateEntry = obj.IsPrivateEntry;
-                    addFrequentGuests.SelectDate = obj.SelectDate;
-                    addFrequentGuests.StartingFrom = obj.StartingFrom;
+                    addFrequentGuests.SelectDate = DateOnly.FromDateTime(DateTime.ParseExact(obj.SelectDate, "dd-MM-yyyy", CultureInfo.InvariantCulture));
+                    addFrequentGuests.StartingFrom = TimeOnly.FromDateTime(DateTime.ParseExact(obj.StartingFrom, "HH:mm:ss", CultureInfo.InvariantCulture));
+
                     addFrequentGuests.ValidFor = obj.ValidFor;
 
                 }
@@ -2120,15 +2372,21 @@ namespace Call2Owner.Controllers
                     if (!isMatchAllowEntryForNext)
                     return NotFound(new { message = $"Match allowed entry for next: {string.Join(", ", AllowEntryForNext)}" });
 
-                    if (!obj.StartDate.HasValue)
+                    if (string.IsNullOrWhiteSpace(obj.StartDate))
                         return NotFound(new { message = "Start date required." });
 
-                    if (!obj.EndDate.HasValue)
-                        return NotFound(new { message = "End date required." });
+                    if (!CheckValidDate(obj.StartDate))
+                        return NotFound(new { message = "Start date must be in 'dd-MM-yyyy' format." });
+
+                    if (string.IsNullOrWhiteSpace(obj.EndDate))
+                            return NotFound(new { message = "End date required." });
+
+                    if (!CheckValidDate(obj.EndDate))
+                        return NotFound(new { message = "End date must be in 'dd-MM-yyyy' format." });
 
                     addFrequentGuests.AllowEntryForNext = obj.AllowEntryForNext;
-                    addFrequentGuests.StartDate = obj.StartDate;
-                    addFrequentGuests.EndDate = obj.EndDate;
+                    addFrequentGuests.StartDate = DateOnly.FromDateTime(DateTime.ParseExact(obj.StartDate, "dd-MM-yyyy", CultureInfo.InvariantCulture));
+                    addFrequentGuests.EndDate = DateOnly.FromDateTime(DateTime.ParseExact(obj.EndDate, "dd-MM-yyyy", CultureInfo.InvariantCulture));
 
                 }
 
@@ -2170,18 +2428,22 @@ namespace Call2Owner.Controllers
 
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetAllResidentHouseholdVehicle)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-all-resident-household-frequent-guests")]
         public async Task<ActionResult<IEnumerable<ResidentFrequentGuestsDto>>> GetAllResidentHouseholdFrequentGuests()
         {
             try
             {
 
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getResidentByUserId = await _context.Resident
@@ -2214,18 +2476,21 @@ namespace Call2Owner.Controllers
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.UpdateResidentHouseholdVehicleById)]
+        [Authorize(Policy = Utilities.Permission.Update)]
         [HttpPost("update-resident-household-frequent-guests-by-id")]
         public async Task<IActionResult> UpdateResidentHouseholdFrequentGuestsById([FromForm] UpdateFrequentlyGuestsSelectedRecord obj)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
                 }
 
                 var getFrequentlyGuestById = await _context.ResidentFrequentlyGuest
@@ -2358,15 +2623,22 @@ namespace Call2Owner.Controllers
         #region Frequent Entries APIs
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.GetResidentHouseholdFamilyForm)]
+        [Authorize(Policy = Utilities.Permission.Get)]
         [HttpGet("get-resident-household-frequent-entries-form")]
         public async Task<IActionResult> GetResidentHouseholdFrequentEntriesForm()
         {
             try
             {
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
-                if (currentUserId == "0")
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
 
                 // Step 1: Get the main FrequentEntries ID from static field
                 int entityTypeDetailValue = 0;
@@ -2420,135 +2692,536 @@ namespace Call2Owner.Controllers
 
                 return Ok(response);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return NotFound(new { message = "No Household found, contact administration." });
             }
         }
 
         [Authorize(Policy = Utilities.Module.Resident)]
-        //[Authorize(Policy = Utilities.Permission.AddResidentHouseholdFamily)]
-        [HttpPost("add-resident-household-frequent-entries")]
-        public async Task<IActionResult> AddResidentHouseholdFrequentEntries([FromForm] AddResidentFrequentGuestsSelectedRecord obj)
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-all-resident-household-frequent-entries-companies-by-entrytype")]
+        public async Task<IActionResult> GetAllByEntryType(string EntryType)
         {
             try
             {
-                var currentUserId = Convert.ToString(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
 
-
-                if (currentUserId == "0")
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return NotFound(new { message = "Invalid or Expired Token." });
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+           
+            var result = new List<object>();
+
+            if (!new[] { "cab", "delivery", "visiting help" }.Contains(EntryType.Trim().ToLower()))
+            {
+                return BadRequest(new {StatusCode=StatusCodes.Status400BadRequest, message = "Invalid entry type. Allowed: Cab, Delivery, or Visiting Help." });
+            }
+
+            EntryType = EntryType.Trim().ToLower();
+
+            if (EntryType == "cab")
+            {
+                result = _context.CabCompany
+                    .Where(c => c.IsActive && (c.IsDeleted == null || c.IsDeleted == false))
+                    .OrderBy(c => c.Name)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        c.Logo
+                    })
+                    .Cast<object>() // 👈 Needed to match List<object>
+                    .ToList();
+            }
+            else if (EntryType == "delivery") 
+            {
+                result = _context.DeliveryCompany
+                                         .Where(c => c.IsActive && (c.IsDeleted == null || c.IsDeleted == false))
+                                         .OrderBy(c => c.Name)
+                                         .Select(c => new
+                                         {
+                                             c.Id,
+                                             c.Name,
+                                             c.Logo
+                                         })
+                                         .Cast<object>()
+                                         .ToList();
+
+            }
+            else if (EntryType == "visiting help")
+            {
+                result = _context.VisitingHelpCategory
+                                       .Where(c => c.IsActive && (c.IsDeleted == null || c.IsDeleted == false))
+                                       .OrderBy(c => c.Name)
+                                       .Select(c => new
+                                       {
+                                           c.Id,
+                                           c.Name,
+                                           Logo = (string?)null
+                                       })
+                                        .Cast<object>()
+                                       .ToList();
+
+            }
+            else
+            {
+                return NotFound(new { StatusCode=StatusCodes.Status404NotFound, message="No data found."});
+            }
+
+                return Ok(result);
+            }
+            catch (Exception)
+            {
+
+                return NotFound(new { StatusCode = StatusCodes.Status404NotFound, message = "No data found." });
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Add)]
+        [HttpPost("add-resident-frequent-entry")]
+        public async Task<IActionResult> AddResidentFrequentEntry([FromForm] AddResidentFrequentEntriesSelectedRecord request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized(new { message = "Invalid or expired token." });
                 }
 
-
-
-                AddResidentFrequentGuests addFrequentGuests = new AddResidentFrequentGuests();
-
                 var getResidentIdByUserId = await _context.Resident
-                      .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
-                      .Select(d => d.Id)
-                      .FirstOrDefaultAsync();
-
+                   .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                   .Select(d => d.Id)
+                   .FirstOrDefaultAsync();
 
                 if (getResidentIdByUserId == null)
                 {
                     return NotFound(new { message = "Resident not found." });
                 }
 
-                string[] GuestType = ["Once", "Frequently"];
-
-                bool isMatchGuestType = GuestType.Any(g => g.StartsWith(obj.GuestType, StringComparison.OrdinalIgnoreCase));
-
-                // common check
-                if (!isMatchGuestType)
+                // Validate EntryType
+                var allowedEntryTypes = new[] { "cab", "delivery", "visiting help" };
+                if (!allowedEntryTypes.Contains(request.EntryType.Trim().ToLower()))
                 {
-                    return NotFound(new { message = $"Guest Type not found, please choose any of: {string.Join(", ", GuestType)}'." });
+                    return BadRequest( new { StatusCode = StatusCodes.Status404NotFound, message = $"Invalid Entry Type. Allowed: {string.Join(", ", allowedEntryTypes)}" });
                 }
 
+                // Validate Frequently Type
+                var allowedFreqTypes = new[] { "once", "frequently" };
 
-                if (obj.GuestType == "Once")
+                if (!allowedFreqTypes.Contains(request.FrequentlyType.Trim().ToLower()))
                 {
-
-                    if (!obj.IsPrivateEntry == true || !obj.IsPrivateEntry == false)
-                        return NotFound(new { message = "Is Private Entry?" });
-
-
-                    if (!obj.StartDate.HasValue)
-                        return NotFound(new { message = "Start date required." });
-
-
-                    if (!obj.StartingFrom.HasValue)
-                        return NotFound(new { message = "Starting date required." });
-
-                    string[] ValidFor = ["1 Hour", "2 Hours", "4 Hours", "8 Hours", "12 Hours", "24 Hours"];
-
-                    bool isMatchValidFor = ValidFor.Any(g => g.StartsWith(obj.ValidFor, StringComparison.OrdinalIgnoreCase));
-
-                    if (!isMatchValidFor)
-                        return NotFound(new { message = $"Valid for: {string.Join(", ", ValidFor)}" });
-
-
-                    addFrequentGuests.IsPrivateEntry = obj.IsPrivateEntry;
-                    addFrequentGuests.SelectDate = obj.SelectDate;
-                    addFrequentGuests.StartingFrom = obj.StartingFrom;
-                    addFrequentGuests.ValidFor = obj.ValidFor;
-
-                }
-                else if (obj.GuestType == "Frequently")
-                {
-                    string[] AllowEntryForNext = ["1 week", "1 month", "> 1 month"];
-
-                    bool isMatchAllowEntryForNext = AllowEntryForNext.Any(g => g.StartsWith(obj.AllowEntryForNext, StringComparison.OrdinalIgnoreCase));
-
-                    if (!isMatchAllowEntryForNext)
-                        return NotFound(new { message = $"Match allowed entry for next: {string.Join(", ", AllowEntryForNext)}" });
-
-                    if (!obj.StartDate.HasValue)
-                        return NotFound(new { message = "Start date required." });
-
-                    if (!obj.EndDate.HasValue)
-                        return NotFound(new { message = "End date required." });
-
-                    addFrequentGuests.AllowEntryForNext = obj.AllowEntryForNext;
-                    addFrequentGuests.StartDate = obj.StartDate;
-                    addFrequentGuests.EndDate = obj.EndDate;
-
+                    return BadRequest(new { StatusCode = StatusCodes.Status404NotFound, message = $"Invalid Frequently Type. Allowed: {string.Join(", ", allowedFreqTypes)}" });
                 }
 
-
-                OTPGenerator otpGenerator = new OTPGenerator();
-                string otp = otpGenerator.GenerateOTP();
-                addFrequentGuests.UniqueEntryNumber = otp;
-
-                addFrequentGuests.Id = Guid.NewGuid();
-                addFrequentGuests.ResidentId = getResidentIdByUserId;
-                addFrequentGuests.Type = obj.GuestType;
-                addFrequentGuests.GuestName = obj.GuestName;
-                addFrequentGuests.GuestNumber = obj.GuestNumber;
-                addFrequentGuests.Note = obj.Note;
-                addFrequentGuests.IsActive = true;
-                addFrequentGuests.CreatedOn = DateTime.UtcNow;
-                addFrequentGuests.CreatedBy = currentUserId;
-                addFrequentGuests.IsDeleted = false;
-
-                var returnResult = await AddResidentFrequentGuestsAsync(addFrequentGuests);
-
-
-                if (returnResult != null)
+                var entry = new AddResidentFrequentEntries
                 {
+                    Id = Guid.NewGuid(),
+                    ResidentId = getResidentIdByUserId,
+                    EntryType = request.EntryType,
+                    FrequentlyType = request.FrequentlyType,
+                    VehicleNo = request.VehicleNo,
+                    CabCompanyId = request.EntryType.ToLower() == "cab" ? request.CompanyId : null,
+                    DeliveryCompanyId = request.EntryType.ToLower() == "delivery" ? request.CompanyId : null,
+                    VisitingHelpCategoryId = request.EntryType.ToLower() == "visiting help" ? request.CompanyId : null,
+                    VisitingHelpName = request.EntryType.ToLower() == "visiting help" ? request.VisitingHelpName?.ToString() : null,
+                    IsActive = true,
+                    CreatedBy = currentUserId,
+                    CreatedOn = DateTime.UtcNow,
+                    IsDeleted = false,
+                    UniqueEntryCode = new OTPGenerator().GenerateOTP()
+                };
 
-                    return Ok(returnResult);
-                }
-                else
+                if (request.FrequentlyType.ToLower() == "once")
                 {
-                    return NotFound(new { Message = "Unable to Add Frequent Guests" });
+                    if (string.IsNullOrWhiteSpace(request.SelectDate) || string.IsNullOrWhiteSpace(request.StartingFrom))
+                        return BadRequest(new { message = "SelectDate and StartingFrom are required for 'Once' entries." });
+
+                    if (!CheckValidDate(request.SelectDate))
+                        return NotFound(new { message = "Select Date must be in 'dd-MM-yyyy' format." });
+
+                    if (!CheckValidTime(request.StartingFrom))
+                        return NotFound(new { message = "Starting Time must be in 'HH:mm:ss' format." });
+
+                    entry.EntryDate = DateOnly.FromDateTime(DateTime.ParseExact(request.SelectDate, "dd-MM-yyyy", CultureInfo.InvariantCulture));
+                    entry.EntryTimeStart = TimeOnly.FromDateTime(DateTime.ParseExact(request.StartingFrom, "HH:mm:ss", CultureInfo.InvariantCulture));
+                    entry.Validity = request.ValidFor;
+                    entry.IsSurpriseDelivery = request.EntryType.ToLower() == "delivery" ? request.IsPrivateEntry : null;
                 }
+                else if (request.FrequentlyType.ToLower() == "frequently")
+                {
+                    if (string.IsNullOrWhiteSpace(request.DaysOfWeek) || string.IsNullOrWhiteSpace(request.Validity)
+                        || string.IsNullOrWhiteSpace(request.StartTime) || string.IsNullOrWhiteSpace(request.EndTime)
+                        || string.IsNullOrWhiteSpace(request.EntriesPerDay))
+                    {
+                        return BadRequest(new { message = "All fields required for 'Frequently' type are missing." });
+                    }
+
+                    entry.DaysOfWeek = request.DaysOfWeek;
+                    entry.Validity = request.Validity;
+                    entry.EntriesPerDay = request.EntriesPerDay;
+
+                    if (!CheckValidTime(request.StartTime))
+                        return NotFound(new { message = "Start Time must be in 'HH:mm:ss' format." });
+
+                    if (!CheckValidTime(request.EndTime))
+                        return NotFound(new { message = "End Time must be in 'HH:mm:ss' format." });
+
+
+                    entry.EntryTimeStart = TimeOnly.FromDateTime(DateTime.ParseExact(request.StartTime, "HH:mm:ss", CultureInfo.InvariantCulture));
+                    entry.EntryTimeEnd = TimeOnly.FromDateTime(DateTime.ParseExact(request.EndTime, "HH:mm:ss", CultureInfo.InvariantCulture));
+                }
+
+                var saveEntity = _mapper.Map<ResidentFrequentlyEntry>(entry);
+
+                _context.ResidentFrequentlyEntry.Add(saveEntity);
+                await _context.SaveChangesAsync();
+
+                var resultDto = _mapper.Map<AddResidentFrequentEntriesDto>(saveEntity);
+                return Ok(resultDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", error = ex.Message });
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-all-resident-household-frequent-entry")]
+        public async Task<ActionResult<IEnumerable<ResidentFrequentEntryDto>>> GetAllResidentHouseholdFrequentEntry()
+        {
+            try
+            {
+
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+
+                var getResidentByUserId = await _context.Resident
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.UserId == Guid.Parse(currentUserId))
+                    .Select(s => s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (getResidentByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+                var residentFrequentlyEntries = await (
+                    from entry in _context.ResidentFrequentlyEntry
+                    where entry.IsDeleted != true
+                          && entry.IsActive == true
+                          && entry.ResidentId == getResidentByUserId
+                    orderby entry.CreatedOn descending
+                    join cab in _context.CabCompany
+                        on entry.CabCompanyId equals cab.Id into cabJoin
+                    from cabCompany in cabJoin.DefaultIfEmpty()
+                    join delivery in _context.DeliveryCompany
+                        on entry.DeliveryCompanyId equals delivery.Id into deliveryJoin
+                    from deliveryCompany in deliveryJoin.DefaultIfEmpty()
+                    join visiting in _context.VisitingHelpCategory
+                        on entry.VisitingHelpCategoryId equals visiting.Id into visitingJoin
+                    from visitingCategory in visitingJoin.DefaultIfEmpty()
+                    select new ResidentFrequentEntryDto
+                    {
+                        Id = entry.Id,
+                        ResidentId = entry.ResidentId,
+                        EntryType = entry.EntryType,
+                        FrequentlyType = entry.FrequentlyType,
+                        AllowEntryInNext = entry.AllowEntryInNext,
+                        EntryDate = entry.EntryDate,
+                        IsSurpriseDelivery = entry.IsSurpriseDelivery,
+                        IsLeaveAtGate = entry.IsLeaveAtGate,
+                        EntryTimeStart = entry.EntryTimeStart,
+                        EntryTimeEnd = entry.EntryTimeEnd,
+                        VehicleNo = entry.VehicleNo,
+                        CabCompanyId = entry.CabCompanyId,
+                        CabCompanyName = cabCompany != null ? cabCompany.Name : null,
+                        DeliveryCompanyId = entry.DeliveryCompanyId,
+                        DeliveryCompanyName = deliveryCompany != null ? deliveryCompany.Name : null,
+                        VisitingHelpCategoryId = entry.VisitingHelpCategoryId,
+                        VisitingHelpCategoryName = visitingCategory != null ? visitingCategory.Name : null,
+                        DaysOfWeek = entry.DaysOfWeek,
+                        Validity = entry.Validity,
+                        EntriesPerDay = entry.EntriesPerDay,
+                        UniqueEntryCode = entry.UniqueEntryCode,
+                        IsActive = entry.IsActive,
+                        CreatedBy = entry.CreatedBy,
+                        CreatedOn = entry.CreatedOn,
+                        IsDeleted = entry.IsDeleted,
+                        VisitingHelpName = entry.VisitingHelpName
+                    }).ToListAsync();
+
+                if (!residentFrequentlyEntries.Any())
+                {
+                    return Ok(new { message = "No frequent entry added." });
+                }
+
+              //  return Ok(residentFrequentlyEntries);
+
+                return Ok(_mapper.Map<List<ResidentFrequentEntryDto>>(residentFrequentlyEntries));
 
             }
             catch (Exception ex)
             {
-                return BadRequest();
+                return NotFound(new { message = "No frequent entry added." });
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Update)]
+        [HttpPost("update-resident-household-frequent-entry-by-id")]
+        public async Task<IActionResult> UpdateResidentFrequentEntry([FromForm] UpdateResidentFrequentEntriesSelectedRecord request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized(new { message = "Invalid or expired token." });
+                }
+
+                var getResidentIdByUserId = await _context.Resident
+                    .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                    .Select(d => d.Id)
+                    .FirstOrDefaultAsync();
+
+                if (getResidentIdByUserId == Guid.Empty)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                // Find existing entry
+                var entry = await _context.ResidentFrequentlyEntry
+                    .FirstOrDefaultAsync(e => e.Id == request.ResidentFrequentEntryId && e.ResidentId == getResidentIdByUserId && e.IsDeleted != true);
+
+                if (entry == null)
+                {
+                    return NotFound(new { message = "Frequent entry not found." });
+                }
+
+                // Validate EntryType
+                var allowedEntryTypes = entry.EntryType;
+
+                // Validate Frequently Type
+                var allowedFreqTypes = entry.FrequentlyType;
+                
+
+                // Update common fields
+                entry.VehicleNo = request.VehicleNo;
+                entry.CabCompanyId = allowedEntryTypes.ToLower() == "cab" ? request.CompanyId : null;
+                entry.DeliveryCompanyId = allowedEntryTypes.ToLower() == "delivery" ? request.CompanyId : null;
+                entry.VisitingHelpCategoryId = allowedEntryTypes.ToLower() == "visiting help" ? request.CompanyId : null;
+                entry.VisitingHelpName = allowedEntryTypes.ToLower() == "visiting help" ? request.VisitingHelpName?.ToString() : null;
+                entry.UpdatedBy = currentUserId;
+                entry.UpdatedOn = DateTime.UtcNow;
+
+                if (request.IsDeleted != null && request.IsDeleted == true)
+                {
+                    entry.IsActive = false;
+                    entry.IsDeleted = true;
+                    entry.DeletedBy = currentUserId;
+                    entry.DeletedOn = DateTime.UtcNow;
+                }
+
+                // Handle "once"
+                if (allowedFreqTypes.ToLower() == "once")
+                {
+                    if (string.IsNullOrWhiteSpace(request.SelectDate) || string.IsNullOrWhiteSpace(request.StartingFrom))
+                        return BadRequest(new { message = "SelectDate and StartingFrom are required for 'Once' entries." });
+
+                    if (!CheckValidDate(request.SelectDate))
+                        return NotFound(new { message = "Select Date must be in 'dd-MM-yyyy' format." });
+
+                    if (!CheckValidTime(request.StartingFrom))
+                        return NotFound(new { message = "Starting Time must be in 'HH:mm:ss' format." });
+
+                    entry.EntryDate = DateOnly.FromDateTime(DateTime.ParseExact(request.SelectDate, "dd-MM-yyyy", CultureInfo.InvariantCulture));
+                    entry.EntryTimeStart = TimeOnly.FromDateTime(DateTime.ParseExact(request.StartingFrom, "HH:mm:ss", CultureInfo.InvariantCulture));
+                    entry.Validity = request.ValidFor;
+                    entry.IsSurpriseDelivery = allowedEntryTypes.ToLower() == "delivery" ? request.IsPrivateEntry : null;
+
+                    // Clear fields not relevant to 'once'
+                 //   entry.EntryTimeEnd = null;
+                    entry.DaysOfWeek = null;
+                    entry.EntriesPerDay = null;
+                }
+
+                // Handle "frequently"
+                else if (allowedFreqTypes.ToLower() == "frequently")
+                {
+                    if (string.IsNullOrWhiteSpace(request.DaysOfWeek) || string.IsNullOrWhiteSpace(request.Validity)
+                        || string.IsNullOrWhiteSpace(request.StartTime) || string.IsNullOrWhiteSpace(request.EndTime)
+                        || string.IsNullOrWhiteSpace(request.EntriesPerDay))
+                    {
+                        return BadRequest(new { message = "All fields required for 'Frequently' type are missing." });
+                    }
+
+                    if (!CheckValidTime(request.StartTime))
+                        return NotFound(new { message = "Start Time must be in 'HH:mm:ss' format." });
+
+                    if (!CheckValidTime(request.EndTime))
+                        return NotFound(new { message = "End Time must be in 'HH:mm:ss' format." });
+
+                    entry.DaysOfWeek = request.DaysOfWeek;
+                    entry.Validity = request.Validity;
+                    entry.EntriesPerDay = request.EntriesPerDay;
+                    entry.EntryTimeStart = TimeOnly.FromDateTime(DateTime.ParseExact(request.StartTime, "HH:mm:ss", CultureInfo.InvariantCulture));
+                    entry.EntryTimeEnd = TimeOnly.FromDateTime(DateTime.ParseExact(request.EndTime, "HH:mm:ss", CultureInfo.InvariantCulture));
+
+                    // Clear fields not relevant to 'frequently'
+                    entry.EntryDate = null;
+                    entry.IsSurpriseDelivery = null;
+                }
+
+                _context.ResidentFrequentlyEntry.Update(entry);
+                await _context.SaveChangesAsync();
+
+                var resultDto = _mapper.Map<UpdateResidentFrequentEntryDto>(entry);
+
+                return Ok(resultDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest( new {StatusCode= StatusCodes.Status400BadRequest, message = "Unable to update frequent entry."});
+            }
+        }
+
+
+        #endregion
+
+        #region Daily Help APIs
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-all-daily-help-categories")]
+        public async Task<ActionResult<IEnumerable<DailyHelpCategoriesDto>>> GetAllDailyHelpCategories()
+        {
+            try
+            {
+
+            var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return NotFound(new
+                {
+                    statusCode = StatusCodes.Status404NotFound,
+                    message = "Invalid or Expired Token."
+                });
+            }
+
+            var dailyHelpCategories = await _context.EntityTypeDetail
+         .Where(s => s.IsDeleted != true && s.IsActive == true && s.EntityTypeId==10)
+         .OrderBy(s => s.Id)
+           .Select(s => new DailyHelpCategoriesDto
+            {
+                Id = Convert.ToInt32(s.Value),
+                Name = s.Label 
+            })
+         .ToListAsync();
+
+            if (dailyHelpCategories !=null)
+            {
+            return Ok(_mapper.Map<List<DailyHelpCategoriesDto>>(dailyHelpCategories));
+            }
+            else
+            {
+                return NotFound(new { StatusCode=StatusCodes.Status404NotFound, message = "No daily help found."});
+            }
+
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { StatusCode = StatusCodes.Status404NotFound, message = "No daily help found." });
+            }
+
+        }
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-all-daily-helps-by-categoryid")]
+        public async Task<ActionResult<IEnumerable<SocietyUserProfileDto>>> GetAllDailyHelpsByCategoryid(Guid societyId, int categoryId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+
+                var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+                using var connection = new SqlConnection(connectionString);
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@SocietyId", societyId, DbType.Guid);
+                parameters.Add("@CategoryId", categoryId, DbType.Int32);
+
+                var result = await connection.QueryAsync<SocietyUserProfileDto>(
+                    "[dbo].[GetSocietyUsersProfile]",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var dailyHelpList = result.Select(user =>
+                {
+                    List<TimeSlot> timeSlots = new();
+
+                        timeSlots = System.Text.Json.JsonSerializer.Deserialize<List<TimeSlot>>(user.AllowedTimeSlotJson ?? "[]")
+                                     ?? new List<TimeSlot>();
+                   
+
+                    return new SocietyUserProfileDto
+                    {
+                        UserProfileId = user.UserProfileId,
+                        SocietyId = user.SocietyId,
+                        Name = user.Name,
+                        PhoneNumber = user.PhoneNumber,
+                        RolesId = user.RolesId,
+                        ProfilePic = user.ProfilePic,
+                        IsInside = user.IsInside,
+                        HousesWorking = user.HousesWorking,
+                        RatingOutOf5 = user.RatingOutOf5,
+                        AllowedTimeSlots = timeSlots
+                    };
+                }).ToList();
+
+
+                return Ok(dailyHelpList);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    message = "No daily help found."
+                });
             }
         }
 
@@ -2646,10 +3319,10 @@ namespace Call2Owner.Controllers
                 }
 
                 // Generate the URL to access the uploaded file
-                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+                 string fileUrl = $"https://apisociety.call2owner.com/Images/Resident/Documents/{blobName}";
 
                 //Local Path
-                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Documents/{blobName}";
+              //  string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Documents/{blobName}";
 
 
                 return fileUrl; // Return the accessible file URL
@@ -2694,10 +3367,10 @@ namespace Call2Owner.Controllers
                 }
 
                 // Generate the URL to access the uploaded file
-                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+                  string fileUrl = $"https://apisociety.call2owner.com/Images/Resident/Family/{blobName}";
 
                 //Local Path
-                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Family/{blobName}";
+                //string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Family/{blobName}";
 
 
                 return fileUrl; // Return the accessible file URL
@@ -2717,6 +3390,7 @@ namespace Call2Owner.Controllers
 
             if (userExists != null)
             {
+                userExists.SocietyFlatId = updateResident.SocietyFlatId;
                 userExists.UpdatedBy = updateResident.UpdatedBy;
                 userExists.UpdatedOn = updateResident.UpdatedOn;
                 userExists.DetailJson = updateResident.DetailJson;
@@ -2811,10 +3485,10 @@ namespace Call2Owner.Controllers
                 }
 
                 // Generate the URL to access the uploaded file
-                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+                  string fileUrl = $"https://apisociety.call2owner.com/Images/Resident/Pet/{blobName}";
 
                 //Local Path
-                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Pet/{blobName}";
+               // string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Pet/{blobName}";
 
 
                 return fileUrl; // Return the accessible file URL
@@ -2899,10 +3573,10 @@ namespace Call2Owner.Controllers
                 }
 
                 // Generate the URL to access the uploaded file
-                //  string fileUrl = $"https://api.wltpe.com/wltpe_images/images/profile-images/{blobName}";
+                  string fileUrl = $"https://apisociety.call2owner.com/Images/Resident/Vehicle/{blobName}";
 
                 //Local Path
-                string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Vehicle/{blobName}";
+               // string fileUrl = $"C://Users//WLTPE//source//repos//c2o//Call2Owner.API//Images//Resident//Vehicle/{blobName}";
 
 
                 return fileUrl; // Return the accessible file URL
@@ -2997,6 +3671,60 @@ namespace Call2Owner.Controllers
             return responseDto;
         }
 
+        private bool CheckValidDate(string Date)
+        {
+            string input = Date;
+            DateTime parsedDate;
+
+            bool isValid = DateTime.TryParseExact(
+                input,
+                "dd-MM-yyyy",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out parsedDate
+            );
+
+            return isValid;
+        }
+
+        private bool CheckValidTime(string Time)
+        {
+            string input = Time;
+            DateTime parsedDate;
+
+            DateTime parsedTime;
+
+            bool isValid = DateTime.TryParseExact(
+                Time,
+                "HH:mm:ss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out parsedTime
+            );
+
+            return isValid;
+        }
+        #endregion
+
+        #region FrequentEntriesMethod
+
+        private async Task<AddResidentFrequentEntriesDto?> AddResidentFrequentEntriesAsync(AddResidentFrequentEntries addResidentFrequentEntries)
+        {
+            // Convert input DTO to EF Core entity
+            var residentFrequentEntry = _mapper.Map<ResidentFrequentlyEntry>(addResidentFrequentEntries);
+
+            // Add to DbContext
+            _context.ResidentFrequentlyEntry.Add(residentFrequentEntry);
+
+            // Save to DB
+            await _context.SaveChangesAsync();
+
+            // Convert the saved entity to output DTO
+            var residentFrequentEntryResponseDto = _mapper.Map<AddResidentFrequentEntriesDto>(residentFrequentEntry);
+
+            return residentFrequentEntryResponseDto;
+        }
+
 
         #endregion
     }
@@ -3085,6 +3813,7 @@ namespace Call2Owner.Controllers
     public class SelectedRecord
     {
         public int entityTypeId { get; set; }
+        public Guid societyFlatId { get; set; }
         public string fieldText { get; set; }
         public string fieldId { get; set; }
         public string fieldName { get; set; }
@@ -3163,7 +3892,8 @@ namespace Call2Owner.Controllers
     public class UpdateResident 
     {
                 public Guid Id { get; set; }
-                public string UpdatedBy {get; set;}
+        public Guid SocietyFlatId { get; set; }
+        public string UpdatedBy {get; set;}
                 public DateTime UpdatedOn {get; set;}
                 public string DetailJson { get; set; }
     }
@@ -3306,7 +4036,36 @@ namespace Call2Owner.Controllers
         public PetDetails Detail { get; set; } = null!; // Or appropriate type
     }
 
+    public class DailyHelpCategoriesDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
 
+    public class TimeSlot
+    {
+        public int id { get; set; }
+        public string start { get; set; }
+        public string end { get; set; }
+        public bool isActive { get; set; }
+    }
+
+    public class SocietyUserProfileDto
+    {
+        public Guid UserProfileId { get; set; }
+        public Guid SocietyId { get; set; }
+        public string Name { get; set; }
+        public string PhoneNumber { get; set; }
+        public int RolesId { get; set; }
+        public string ProfilePic { get; set; }
+        public bool IsInside { get; set; }
+        public string AllowedTimeSlotJson { get; set; }
+        public int HousesWorking { get; set; }
+        public double RatingOutOf5 { get; set; }
+
+        // New property to hold deserialized JSON
+        public List<TimeSlot> AllowedTimeSlots { get; set; } = new();
+    }
     public class Breed
     {
         public string Name { get; set; } = null!;
@@ -3533,12 +4292,12 @@ namespace Call2Owner.Controllers
     {
         public string GuestType { get; set; }
         public bool? IsPrivateEntry { get; set; }
-        public DateOnly? SelectDate { get; set; }
-        public TimeOnly? StartingFrom { get; set; }
+        public string? SelectDate { get; set; }
+        public string? StartingFrom { get; set; }
         public string? ValidFor { get; set; }
         public string? AllowEntryForNext { get; set; }
-        public DateOnly? StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
+        public string? StartDate { get; set; }
+        public string? EndDate { get; set; }
         public string GuestName { get; set; }
         public string GuestNumber { get; set; }
         public string? Note { get; set; }
@@ -3582,10 +4341,6 @@ namespace Call2Owner.Controllers
 
         public bool? IsDeleted { get; set; }
 
-
-
-
- 
 
 
     }
@@ -3697,18 +4452,140 @@ namespace Call2Owner.Controllers
 
     public class AddResidentFrequentEntriesSelectedRecord
     {
-        public string GuestType { get; set; }
-        public bool? IsPrivateEntry { get; set; }
-        public DateOnly? SelectDate { get; set; }
-        public TimeOnly? StartingFrom { get; set; }
-        public string? ValidFor { get; set; }
-        public string? AllowEntryForNext { get; set; }
-        public DateOnly? StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
-        public string GuestName { get; set; }
-        public string GuestNumber { get; set; }
-        public string? Note { get; set; }
+        public string EntryType { get; set; } // Cab, Delivery or Visiting Help
+        public string FrequentlyType { get; set; } // Once or Frequently
+        public bool? IsPrivateEntry { get; set; }// Required : Delivery : Once
+        public string? SelectDate { get; set; } // Required : Any EntryType : Once
+        public string? StartingFrom { get; set; } // Required: Any EntryType :  Once
+        public string? ValidFor { get; set; } // Required: Any EntryType : Once
+        public string? VehicleNo { get; set; } // Required:  Cab : Once
+        public int? CompanyId { get; set; } // Required:  Any EntryType : Any FrequentlyType :  value: CabCompanyId, DeliveryCompanyId or VisitingCategoryId
+        public string? VisitingHelpName { get; set; } // Required: Visiting Help: Any FrequentlyType: value: Company Name Enter
+        public string? DaysOfWeek { get; set; } //  Required : Any EntryType : Frequently 
+        public string? Validity { get; set; } //  Required : Any EntryType : Frequently 
+        public string? StartTime { get; set; } //  Required : Any EntryType : Frequently 
+        public string? EndTime { get; set; } //  Required : Any EntryType : Frequently 
+        public string? EntriesPerDay { get; set; } //  Required : Any EntryType : Frequently 
     }
+
+    public class AddResidentFrequentEntries
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public string EntryType { get; set; }
+
+        public string FrequentlyType { get; set; }
+
+        public string? AllowEntryInNext { get; set; }
+
+        public DateOnly? EntryDate { get; set; }
+
+        public bool? IsSurpriseDelivery { get; set; }
+
+        public bool? IsLeaveAtGate { get; set; }
+
+        public TimeOnly? EntryTimeStart { get; set; }
+
+        public TimeOnly? EntryTimeEnd { get; set; }
+
+        public string? VehicleNo { get; set; }
+
+        public int? CabCompanyId { get; set; }
+
+        public int? DeliveryCompanyId { get; set; }
+
+        public int? VisitingHelpCategoryId { get; set; }
+
+        public string? DaysOfWeek { get; set; }
+
+        public string? Validity { get; set; }
+
+        public string? EntriesPerDay { get; set; }
+
+        public string? UniqueEntryCode { get; set; } = null!;
+
+        public bool? IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? VisitingHelpName { get; set; }
+
+    }
+
+    public class UpdateResidentFrequentEntriesSelectedRecord
+    {
+        public Guid ResidentFrequentEntryId { get; set; }
+        public bool? IsPrivateEntry { get; set; }// Required : Delivery : Once
+        public string? SelectDate { get; set; } // Required : Any EntryType : Once
+        public string? StartingFrom { get; set; } // Required: Any EntryType :  Once
+        public string? ValidFor { get; set; } // Required: Any EntryType : Once
+        public string? VehicleNo { get; set; } // Required:  Cab : Once
+        public int? CompanyId { get; set; } // Required:  Any EntryType : Any FrequentlyType :  value: CabCompanyId, DeliveryCompanyId or VisitingCategoryId
+        public string? VisitingHelpName { get; set; } // Required: Visiting Help: Any FrequentlyType: value: Company Name Enter
+        public string? DaysOfWeek { get; set; } //  Required : Any EntryType : Frequently 
+        public string? Validity { get; set; } //  Required : Any EntryType : Frequently 
+        public string? StartTime { get; set; } //  Required : Any EntryType : Frequently 
+        public string? EndTime { get; set; } //  Required : Any EntryType : Frequently 
+        public string? EntriesPerDay { get; set; } //  Required : Any EntryType : Frequently 
+        public bool? IsDeleted { get; set; } //  Required : Any EntryType : Frequently 
+    }
+    public class UpdateResidentFrequentlyEntry
+    {
+        public Guid ResidentFrequentlyEntryId { get; set; }
+
+        public string EntryType { get; set; } = null!; // Cab, Delivery, Visiting Help
+
+        public string FrequentlyType { get; set; } = null!; // Once or Frequently
+
+        public string? AllowEntryInNext { get; set; }
+
+        public DateOnly? EntryDate { get; set; }
+
+        public bool? IsSurpriseDelivery { get; set; }
+
+        public bool? IsLeaveAtGate { get; set; }
+
+        public TimeOnly? EntryTimeStart { get; set; }
+
+        public TimeOnly? EntryTimeEnd { get; set; }
+
+        public string? VehicleNo { get; set; }
+
+        public int? CabCompanyId { get; set; }
+
+        public int? DeliveryCompanyId { get; set; }
+
+        public int? VisitingHelpCategoryId { get; set; }
+
+        public string? VisitingHelpName { get; set; }
+
+        public string? DaysOfWeek { get; set; }
+
+        public string? Validity { get; set; }
+
+        public string? EntriesPerDay { get; set; }
+
+        public string? UniqueEntryCode { get; set; }
+
+        public bool? IsActive { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+    }
+
 
     #endregion
 

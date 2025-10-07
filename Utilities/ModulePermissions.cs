@@ -54,10 +54,10 @@ namespace Utilities
         public const string Import = "206";
         public const string Export = "207";
 
-        public const string VerifyDocument = "206";
-        public const string VerifySociety = "207";
-        public const string ResendVerificationEmail = "208";
-        public const string ForgetEmailPwd = "209";
+        public const string VerifyDocument = "220";
+        public const string VerifySociety = "221";
+        public const string ResendVerificationEmail = "222";
+        public const string ForgetEmailPwd = "223";
 
     }
 

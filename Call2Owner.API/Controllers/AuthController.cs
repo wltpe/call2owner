@@ -87,7 +87,7 @@ namespace Call2Owner.Controllers
             var jwtToken = handler.ReadJwtToken(token);
             var roleId = jwtToken.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
 
-            if (currentUser.RolesId == Convert.ToInt32(UserRoles.Admin))
+            if (currentUser.Roles.Id == Convert.ToInt32(UserRoles.Admin))
             {
                 // Forcefully assign InsurerCustomer role, no need for client to send it
                 model.RoleId = Convert.ToInt32(UserRoles.SocietyAdmin);
@@ -97,12 +97,12 @@ namespace Call2Owner.Controllers
                 return BadRequest(new { message = "Email / Phone number already exists!" });
 
             // Ensure that the new user cannot have the same role as the current user
-            if (currentUser.RolesId == model.RoleId)
+            if (currentUser.Roles.Id == model.RoleId)
                 return BadRequest(new { message = "You cannot assign the same role as yours." });
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RolesId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.Roles.Id);
             if (!validChildRole && role != UserRoles.SuperAdmin)
                 return Forbid("You do not have permission to assign this role.");
 
@@ -120,7 +120,6 @@ namespace Call2Owner.Controllers
                 LastName = model.LastName,
                 Email = model.Email,
                 PhoneNumber = model.MobileNumber,
-                RolesId = model.RoleId,
                 VerificationCode = verificationCode,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
@@ -218,12 +217,12 @@ namespace Call2Owner.Controllers
 
 
             // Ensure that the new user cannot have the same role as the current user
-            if (currentUser.RolesId == model.RoleId)
+            if (currentUser.Roles.Id == model.RoleId)
                 return BadRequest(new { message = "You cannot assign the same role as yours." });
             // Validate whether the current user can assign the requested role
             string role = GetUserRoleFromToken();
 
-            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.RolesId);
+            var validChildRole = await _context.Role.AnyAsync(r => r.Id == model.RoleId && r.ParentRoleId == currentUser.Roles.Id);
             if (!validChildRole && (role != UserRoles.SuperAdmin || role != UserRoles.Admin))
                 return Forbid("You do not have permission to assign this role.");
 
@@ -260,7 +259,6 @@ namespace Call2Owner.Controllers
                 Email = email,
                 PhoneNumber = mobile,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                RolesId = model.RoleId,
                 VerificationCode = verificationCode,
                 VerificationCodeGenerationTime = DateTime.UtcNow,
                 IsActive = true,
@@ -292,14 +290,14 @@ namespace Call2Owner.Controllers
 
             await _context.SaveChangesAsync();
 
-            if (user.RolesId == Convert.ToInt32(UserRoles.Admin))
+            if (user.Roles.Id == Convert.ToInt32(UserRoles.Admin))
             {
                 var insurerToSendDTO = new InsurerUserDTO
                 {
                     UserId = user.UserName,
                     InsurerId = Guid.Parse(currentUserId),
                     IsActive = user.IsActive,
-                    IsDeleted = user.IsDeleted
+                    IsDeleted = user.IsDeleted.Value
                 };
             }
 
@@ -331,7 +329,7 @@ namespace Call2Owner.Controllers
                 LastName = user.LastName,
                 Email = user.Email,
                 MobileNumber = user.PhoneNumber,
-                RoleId = user.RolesId
+                RoleId = user.Roles.Id
             };
 
             return Ok(new
@@ -680,7 +678,7 @@ namespace Call2Owner.Controllers
 
             // Fetch Users belonging to those roles
             var users = await _context.User
-                .Where(u => childRoleIds.Contains(u.RolesId))
+                .Where(u => childRoleIds.Contains(u.Roles.Id))
                 .ToListAsync();
 
             var userList = _mapper.Map<List<UserDto>>(users); // Convert to DTOs
@@ -716,7 +714,7 @@ namespace Call2Owner.Controllers
                     userId = u.UserName,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RolesId,
+                    RoleId = u.Roles.Id,
                     RoleName = u.Roles.RoleName,
                     Email = u.Email,
                     MobileNumber = u.PhoneNumber,
@@ -748,7 +746,7 @@ namespace Call2Owner.Controllers
                 {
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RolesId,
+                    RoleId = u.Roles.Id,
                     Email = u.Email,
                     MobileNumber = u.PhoneNumber,
                     IsActive = u.IsActive,
@@ -776,12 +774,12 @@ namespace Call2Owner.Controllers
 
             // Step 2: Get users with the parent role ID
             var users = await _context.User
-                .Where(u => u.RolesId == parentRoleId)
+                .Where(u => u.Roles.Id == parentRoleId)
                 .Select(u => new UsersDtoOutput
                 {
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    RoleId = u.RolesId,
+                    RoleId = u.Roles.Id,
                     Email = u.Email,
                     MobileNumber = u.PhoneNumber,
                     IsActive = u.IsActive,
@@ -847,80 +845,79 @@ namespace Call2Owner.Controllers
             //var existingRoles = await context.Role.ToDictionaryAsync(r => r.RoleName, r => r);
 
             //// Begin transaction to ensure consistency
-            using var transaction = await context.Database.BeginTransactionAsync();
+            //using var transaction = await context.Database.BeginTransactionAsync();
 
-            try
-            {
-                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
+            //try
+            //{
+            //    //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles ON");
 
-                //    foreach (var (id, roleName, parentRoleId) in roleHierarchy)
-                //    {
-                //        if (!existingRoles.ContainsKey(roleName))
-                //        {
-                //            var trackedEntity = context.ChangeTracker.Entries<Role>()
-                //                                       .FirstOrDefault(e => e.Entity.Id == id);
+            //    //    foreach (var (id, roleName, parentRoleId) in roleHierarchy)
+            //    //    {
+            //    //        if (!existingRoles.ContainsKey(roleName))
+            //    //        {
+            //    //            var trackedEntity = context.ChangeTracker.Entries<Role>()
+            //    //                                       .FirstOrDefault(e => e.Entity.Id == id);
 
-                //            if (trackedEntity != null)
-                //            {
-                //                trackedEntity.State = EntityState.Detached;
-                //            }
+            //    //            if (trackedEntity != null)
+            //    //            {
+            //    //                trackedEntity.State = EntityState.Detached;
+            //    //            }
 
-                //            var role = new Role
-                //            {
-                //                Id = id,
-                //                RoleName = roleName,
-                //                ParentRoleId = parentRoleId
-                //            };
+            //    //            var role = new Role
+            //    //            {
+            //    //                Id = id,
+            //    //                RoleName = roleName,
+            //    //                ParentRoleId = parentRoleId
+            //    //            };
 
-                //            await context.Role.AddAsync(role);
+            //    //            await context.Role.AddAsync(role);
 
-                //            existingRoles[roleName] = role;
-                //        }
-                //    }
+            //    //            existingRoles[roleName] = role;
+            //    //        }
+            //    //    }
 
-                //    await context.SaveChangesAsync();
+            //    //    await context.SaveChangesAsync();
 
-                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+            //    //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
 
 
-                //    await context.SaveChangesAsync();
+            //    //    await context.SaveChangesAsync();
 
-                //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
+            //    //    await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT Roles OFF");
 
-                var existingRoles = await context.Role.ToListAsync();
+            //    var existingRoles = await context.Role.ToListAsync();
 
-                // Seed SuperAdmin user
-                var superAdminRole = existingRoles.FirstOrDefault(x => x.RoleName == "SuperAdmin");
+            //    // Seed SuperAdmin user
+            //    var superAdminRole = existingRoles.FirstOrDefault(x => x.RoleName == "SuperAdmin");
 
-                if (superAdminRole != null && !await context.User.AnyAsync(u => u.Email == "superadmin@gmail.com"))
-                {
-                    Guid username = Guid.NewGuid();
+            //    if (superAdminRole != null && !await context.User.AnyAsync(u => u.Email == "superadmin@gmail.com"))
+            //    {
+            //        Guid username = Guid.NewGuid();
 
-                    var superAdmin = new User
-                    {
-                        UserName = username,
-                        FirstName = "Super",
-                        LastName = "Admin",
-                        Email = "superadmin@gmail.com",
-                        PhoneNumber = "1122334455",
-                        RolesId = superAdminRole.Id,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Super@123"),
-                        IsActive = true,
-                        IsVerified = true,
-                        CreatedBy= username.ToString(),
-                        CreatedOn = DateTime.UtcNow
-                    };
+            //        var superAdmin = new User
+            //        {
+            //            UserName = username,
+            //            FirstName = "Super",
+            //            LastName = "Admin",
+            //            Email = "superadmin@gmail.com",
+            //            PhoneNumber = "1122334455",
+            //            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Super@123"),
+            //            IsActive = true,
+            //            IsVerified = true,
+            //            CreatedBy= username.ToString(),
+            //            CreatedOn = DateTime.UtcNow
+            //        };
 
-                    await context.User.AddAsync(superAdmin);
-                    await context.SaveChangesAsync();
-                }
+            //        await context.User.AddAsync(superAdmin);
+            //        await context.SaveChangesAsync();
+            //    }
 
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-            }
+            //    await transaction.CommitAsync();
+            //}
+            //catch
+            //{
+            //    await transaction.RollbackAsync();
+            //}
         }
 
         public static bool IsBase64String(string base64)
@@ -991,7 +988,7 @@ namespace Call2Owner.Controllers
                    
                    FirstName = u.FirstName,
                    LastName = u.LastName,
-                   RoleId = u.RolesId,
+                   RoleId = u.Roles.Id,
                    Email = u.Email,
                    MobileNumber = u.PhoneNumber,
                    IsActive = u.IsActive,

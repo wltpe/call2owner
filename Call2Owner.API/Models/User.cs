@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Call2Owner.Models;
 
+[Table("Users")]
 public partial class User
 {
     public Guid UserName { get; set; }
@@ -33,7 +36,7 @@ public partial class User
 
     public bool IsActive { get; set; }
 
-    public bool IsDeleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     public DateTime CreatedOn { get; set; }
 
@@ -83,35 +86,38 @@ public partial class User
 
     public string? CreatedBy { get; set; }
 
-    public int RolesId { get; set; }
-
     public string? UpdatedBy { get; set; }
-
-    public string? PasswordHash { get; set; }
-    public bool? IsVerified { get; set; }
-    public string? VerificationCode { get; set; }
 
     public DateTime? VerificationCodeGenerationTime { get; set; }
 
     public DateTime? VerificationCodeValidationTime { get; set; }
 
-    public virtual ICollection<AdminWallet> AdminWallets { get; set; } = new List<AdminWallet>();
+    public bool? IsVerified { get; set; }
+
+    public string? PasswordHash { get; set; }
+
+    public string? VerificationCode { get; set; }
+
+    public int? RolesId { get; set; }
+
 
     public virtual ICollection<Beneficiary> Beneficiaries { get; set; } = new List<Beneficiary>();
-
+    public virtual ICollection<AdminWallet> AdminWallets { get; set; } = new List<AdminWallet>();
+    public virtual ICollection<RechargeRequest> RechargeRequests { get; set; } = new List<RechargeRequest>();
+    public virtual ICollection<RechargeRequestDispute> RechargeRequestDisputes { get; set; } = new List<RechargeRequestDispute>(); 
     public virtual ICollection<CustomerWallet> CustomerWallets { get; set; } = new List<CustomerWallet>();
 
     public virtual ICollection<GatewayTransaction> GatewayTransactions { get; set; } = new List<GatewayTransaction>();
 
-    public virtual ICollection<RechargeRequestDispute> RechargeRequestDisputes { get; set; } = new List<RechargeRequestDispute>();
+    public virtual ICollection<RechargeRequestDispute> RechargeRequestDispute { get; set; } = new List<RechargeRequestDispute>();
 
-    public virtual ICollection<RechargeRequest> RechargeRequests { get; set; } = new List<RechargeRequest>();
+    public virtual ICollection<RechargeRequest> RechargeRequest { get; set; } = new List<RechargeRequest>();
 
     public virtual ICollection<Refund> Refund { get; set; } = new List<Refund>();
 
     public virtual ICollection<Resident> Resident { get; set; } = new List<Resident>();
 
-    public virtual Role Roles { get; set; } = null!;
+    public virtual Role? Roles { get; set; }
 
     public virtual ICollection<SocietyUser> SocietyUser { get; set; } = new List<SocietyUser>();
 
@@ -121,3 +127,4 @@ public partial class User
 
     public virtual ICollection<UserProfile> UserProfile { get; set; } = new List<UserProfile>();
 }
+
