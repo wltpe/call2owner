@@ -85,6 +85,8 @@ namespace Call2Owner
             CreateMap<ResidentFrequentlyEntry, UpdateResidentFrequentEntryDto>().ReverseMap();
             CreateMap<UpdateResidentFrequentlyEntry, ResidentFrequentlyEntry>().ReverseMap();
             CreateMap<ResidentFrequentlyEntry, ResidentFrequentEntryDto>().ReverseMap();
+
+            CreateMap<SocietyUserFlatWorkingHistory, AddSocietyUserFlatWorkingHistory>().ReverseMap();
         }
     }
 }

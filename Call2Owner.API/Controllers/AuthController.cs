@@ -275,7 +275,7 @@ namespace Call2Owner.Controllers
             var AddSocietyUser = new SocietyUser
             {
                 Id = Guid.NewGuid(),
-                UserId = user.UserName,
+                Username = user.UserName,
                 SocietyId = model.SocietyId,
                 IsApproved = IsApproved,
                 ApprovedOn = ApprovedOn,

@@ -7,7 +7,7 @@ public partial class SocietyUser
 {
     public Guid Id { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid Username { get; set; }
 
     public Guid? SocietyId { get; set; }
 

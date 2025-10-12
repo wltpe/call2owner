@@ -2345,7 +2345,7 @@ namespace Call2Owner.Controllers
                         return NotFound(new { message = "Starting time required." });
 
                     if (!CheckValidTime(obj.StartingFrom))
-                        return NotFound(new { message = "Starting time must be in 'HH:mm' format." });
+                        return NotFound(new { message = "Starting time must be in 'HH:mm:ss' format." });
                
 
                     string[] ValidFor = ["1 Hour","2 Hours","4 Hours","8 Hours","12 Hours","24 Hours"];
@@ -3225,6 +3225,192 @@ namespace Call2Owner.Controllers
             }
         }
 
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-daily-helps-user-detail")]
+        public async Task<ActionResult<IEnumerable<SocietyUserProfileDetailDto>>> GetDailyHelpsUserDetail(Guid UserProfileId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+
+                var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+                using var connection = new SqlConnection(connectionString);
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@UserProfileId", UserProfileId, DbType.Guid);
+
+                var result = await connection.QueryAsync<SocietyUserProfileDetailDto>(
+                    "[dbo].[GetSocietyUserProfileDetail]",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var dailyHelpList = result.Select(user =>
+                {
+                    List<TimeSlot> timeSlots = new();
+
+
+                    timeSlots = System.Text.Json.JsonSerializer.Deserialize<List<TimeSlot>>(user.AllowedTimeSlotJson ?? "[]")
+                                 ?? new List<TimeSlot>();
+
+                    List<WorkingHistory> workingHistories = new();
+
+                    workingHistories = System.Text.Json.JsonSerializer.Deserialize<List<WorkingHistory>>(user.WorkingHistoryJson ?? "[]")
+                                 ?? new List<WorkingHistory>();
+
+
+                    return new SocietyUserProfileDetailDto
+                    {
+                        UserProfileId = user.UserProfileId,
+                        Name = user.Name,
+                        PhoneNumber = user.PhoneNumber,
+                        RolesId = user.RolesId,
+                        ProfilePic = user.ProfilePic,
+                        IsInside = user.IsInside,
+                        HousesWorking = user.HousesWorking,
+                        RatingOutOf5 = user.RatingOutOf5,
+                        AllowedTimeSlots = timeSlots,
+                        WorkingHistory = workingHistories
+                    };
+                }).ToList();
+
+
+                return Ok(dailyHelpList);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    message = "No detail found."
+                });
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Add)]
+        [HttpPost("add-resident-daily-help")]
+        public async Task<IActionResult> AddResidentDailyHelp([FromForm] AddResidentDailyHelpSelectedRecord request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized(new { message = "Invalid or expired token." });
+                }
+
+                var getResidentIdByUserId = await _context.Resident
+                   .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                   .Select(d => new { d.Id, d.SocietyFlatId })
+                   .FirstOrDefaultAsync();
+
+                if (getResidentIdByUserId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+
+                // Step 1: Get the Id of the "SocietyUser" role
+                var societyUserRoleId = await _context.Role
+                    .Where(r => r.RoleName.Contains("SocietyUser"))
+                    .Select(r => r.Id)
+                    .FirstOrDefaultAsync();
+
+                if (societyUserRoleId == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+
+                // Step 2: Verify the user profile
+                var verifyUserProfileId = await (
+                    from d in _context.SocietyUserProfile
+                    join e in _context.SocietyUser on d.SocietyUserId equals e.Id
+                    join f in _context.User on e.Username equals f.UserName
+                    join g in _context.Role on f.RolesId equals g.Id
+                    where (d.IsDeleted == false || d.IsDeleted == null)
+                          && d.IsActive == true
+                          && (e.IsDeleted == false || e.IsDeleted == null)
+                          && e.IsActive == true
+                          && (f.IsDeleted == false || f.IsDeleted == null)
+                          && f.IsActive == true
+                          && f.Role == "admin"
+                          && g.ParentRoleId == societyUserRoleId
+                          && d.Id == request.UserProfileId
+                    select new
+                    {
+                        d.Id
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (verifyUserProfileId == null)
+                {
+                    return NotFound(new { message = "User profile not found." });
+                }
+
+
+
+
+                var addSocietyUserFlatWorkingHistory = new AddSocietyUserFlatWorkingHistory
+                {
+                    Id = Guid.NewGuid(),
+                    SocietyUserProfileId = request.UserProfileId,
+                    SocietyFlatId = getResidentIdByUserId.SocietyFlatId ?? Guid.Empty,
+                    IsAddedByResident = true,
+                    IsNotify = false,
+                    Ratings = 0,
+                    CreatedBy = currentUserId,
+                    CreatedOn = DateTime.UtcNow
+                };
+
+             
+
+                var savedSocietyUserFlatWorkingHistory = _mapper.Map<SocietyUserFlatWorkingHistory>(addSocietyUserFlatWorkingHistory);
+
+                _context.SocietyUserFlatWorkingHistory.Add(savedSocietyUserFlatWorkingHistory);
+                await _context.SaveChangesAsync();
+
+                //var addRe = new AddSocietyUserFlatWorkingHistory
+                //{
+                //    Id = Guid.NewGuid(),
+                //    SocietyUserProfileId = request.UserProfileId,
+                //    SocietyFlatId = getResidentIdByUserId.SocietyFlatId ?? Guid.Empty,
+                //    IsAddedByResident = true,
+                //    IsNotify = false,
+                //    Ratings = 0,
+                //    CreatedBy = currentUserId,
+                //    CreatedOn = DateTime.UtcNow
+                //};
+
+
+
+                //var savedSocietyUserFlatWorkingHistory = _mapper.Map<SocietyUserFlatWorkingHistory>(addSocietyUserFlatWorkingHistory);
+
+                //_context.SocietyUserFlatWorkingHistory.Add(savedSocietyUserFlatWorkingHistory);
+                //await _context.SaveChangesAsync();
+
+                var resultDto = _mapper.Map<AddResidentFrequentEntriesDto>(saveEntity);
+                return Ok(resultDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", error = ex.Message });
+            }
+        }
 
         #endregion
 
@@ -3727,6 +3913,9 @@ namespace Call2Owner.Controllers
 
 
         #endregion
+
+        #region DailyHelpMethod
+        #endregion
     }
 
     #region CommonModel
@@ -4050,6 +4239,12 @@ namespace Call2Owner.Controllers
         public bool isActive { get; set; }
     }
 
+    public class WorkingHistory
+    {
+        public string FlatName { get; set; }
+        public string Working_From { get; set; }
+    }
+
     public class SocietyUserProfileDto
     {
         public Guid UserProfileId { get; set; }
@@ -4065,6 +4260,25 @@ namespace Call2Owner.Controllers
 
         // New property to hold deserialized JSON
         public List<TimeSlot> AllowedTimeSlots { get; set; } = new();
+    }
+
+    public class SocietyUserProfileDetailDto
+    {
+        public Guid UserProfileId { get; set; }
+        public string Name { get; set; }
+        public string PhoneNumber { get; set; }
+        public int RolesId { get; set; }
+        public string ProfilePic { get; set; }
+        public bool IsInside { get; set; }
+        public string AllowedTimeSlotJson { get; set; }
+        public int HousesWorking { get; set; }
+        public double RatingOutOf5 { get; set; }
+        public string WorkingHistoryJson { get; set; }
+
+        // New property to hold deserialized JSON
+        public List<TimeSlot> AllowedTimeSlots { get; set; } = new();
+
+        public List<WorkingHistory> WorkingHistory { get; set; } = new();
     }
     public class Breed
     {
@@ -4450,6 +4664,8 @@ namespace Call2Owner.Controllers
         public List<string> selectedItems { get; set; }
     }
 
+   
+
     public class AddResidentFrequentEntriesSelectedRecord
     {
         public string EntryType { get; set; } // Cab, Delivery or Visiting Help
@@ -4517,6 +4733,8 @@ namespace Call2Owner.Controllers
         public string? VisitingHelpName { get; set; }
 
     }
+
+
 
     public class UpdateResidentFrequentEntriesSelectedRecord
     {
@@ -4586,6 +4804,50 @@ namespace Call2Owner.Controllers
         public DateTime? DeletedOn { get; set; }
     }
 
+
+    #endregion
+
+    #region Daily Help Model
+
+    public class AddResidentDailyHelpSelectedRecord
+    {
+        public Guid UserProfileId { get; set; }
+    }
+    public class AddResidentDailyHelp
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public Guid SocietyUserFlatWorkingHistoryId { get; set; }
+
+        public bool? IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+
+    }
+    public class AddSocietyUserFlatWorkingHistory
+    {
+        public Guid Id { get; set; }
+
+        public Guid SocietyUserProfileId { get; set; }
+
+        public Guid SocietyFlatId { get; set; }
+
+        public bool IsAddedByResident { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public bool IsNotify { get; set; }
+
+        public int? Ratings { get; set; }
+
+    }
 
     #endregion
 

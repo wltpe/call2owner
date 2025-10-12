@@ -1028,7 +1028,7 @@ public partial class DataContext : DbContext
 
             entity.HasIndex(e => e.SocietyId, "IX_SocietyUser_SocietyId");
 
-            entity.HasIndex(e => e.UserId, "IX_SocietyUser_UserId");
+            entity.HasIndex(e => e.Username, "IX_SocietyUser_UserId");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
 
@@ -1036,7 +1036,7 @@ public partial class DataContext : DbContext
 
             entity.HasOne(d => d.Society).WithMany(p => p.SocietyUsers).HasForeignKey(d => d.SocietyId);
 
-            entity.HasOne(d => d.User).WithMany(p => p.SocietyUser).HasForeignKey(d => d.UserId);
+            entity.HasOne(d => d.User).WithMany(p => p.SocietyUser).HasForeignKey(d => d.Username);
         });
 
         modelBuilder.Entity<SocietyUserDocumentUploaded>(entity =>
