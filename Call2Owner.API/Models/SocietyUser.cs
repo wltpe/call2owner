@@ -3,16 +3,13 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class SocietyUser
+public class SocietyUser
 {
     public Guid Id { get; set; }
 
-    public Guid Username { get; set; }
-
-    public Guid? SocietyId { get; set; }
+    public Guid SocietyUserId { get; set; }
 
     public int? EntityTypeDetailId { get; set; }
-
     public bool IsDocumentUploaded { get; set; }
 
     public bool IsApproved { get; set; }
@@ -43,12 +40,16 @@ public partial class SocietyUser
 
     public string? DetailJson { get; set; }
 
+    public Guid? SocietyId { get; set; }
+
     public virtual EntityTypeDetail? EntityTypeDetail { get; set; }
 
     public virtual Society? Society { get; set; }
 
-    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
+    public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploaded { get; set; } = new List<SocietyUserDocumentUploaded>();
 
-    public virtual User User { get; set; } = null!;
+    public virtual User SocietyUserNavigation { get; set; } = null!;
+
     public virtual ICollection<SocietyUserProfile> SocietyUserProfile { get; set; } = new List<SocietyUserProfile>();
 }
+

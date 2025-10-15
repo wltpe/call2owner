@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 
 namespace Call2Owner.Models;
-public partial class SocietyBuildingType
+public class SocietyBuildingType
 {
     public int Id { get; set; }
 

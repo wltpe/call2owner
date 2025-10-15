@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class SocietyUserTimeSlot
+public class SocietyUserTimeSlot
 {
     public Guid Id { get; set; }
 
@@ -27,3 +27,4 @@ public partial class SocietyUserTimeSlot
 
     public virtual SocietyUserProfile SocietyUserProfile { get; set; } = null!;
 }
+

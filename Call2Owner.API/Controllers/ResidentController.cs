@@ -3340,7 +3340,7 @@ namespace Call2Owner.Controllers
                 var verifyUserProfileId = await (
                     from d in _context.SocietyUserProfile
                     join e in _context.SocietyUser on d.SocietyUserId equals e.Id
-                    join f in _context.User on e.Username equals f.UserName
+                    join f in _context.User on e.SocietyUserId equals f.UserName
                     join g in _context.Role on f.RolesId equals g.Id
                     where (d.IsDeleted == false || d.IsDeleted == null)
                           && d.IsActive == true
@@ -3403,7 +3403,7 @@ namespace Call2Owner.Controllers
                 //_context.SocietyUserFlatWorkingHistory.Add(savedSocietyUserFlatWorkingHistory);
                 //await _context.SaveChangesAsync();
 
-                var resultDto = _mapper.Map<AddResidentFrequentEntriesDto>(saveEntity);
+                var resultDto = _mapper.Map<AddResidentFrequentEntriesDto>(savedSocietyUserFlatWorkingHistory);
                 return Ok(resultDto);
             }
             catch (Exception ex)

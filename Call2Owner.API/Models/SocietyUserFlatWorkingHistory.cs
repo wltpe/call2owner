@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 
 namespace Call2Owner.Models;
-public partial class SocietyUserFlatWorkingHistory
+public class SocietyUserFlatWorkingHistory
 {
     public Guid Id { get; set; }
 
@@ -25,9 +25,12 @@ public partial class SocietyUserFlatWorkingHistory
     public string? DeletedBy { get; set; }
 
     public DateTime? DeletedOn { get; set; }
+
     public bool IsNotify { get; set; }
 
     public int? Ratings { get; set; }
+
+    public virtual ICollection<ResidentDailyHelp> ResidentDailyHelp { get; set; } = new List<ResidentDailyHelp>();
 
     public virtual SocietyFlat SocietyFlat { get; set; } = null!;
 

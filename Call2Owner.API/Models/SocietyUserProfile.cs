@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Call2Owner.Models;
 
-public partial class SocietyUserProfile
+public class SocietyUserProfile
 {
     public Guid Id { get; set; }
 
@@ -48,6 +48,7 @@ public partial class SocietyUserProfile
     public DateTime? DeletedOn { get; set; }
 
     public string? DetailJson { get; set; }
+
     public bool? IsInside { get; set; }
 
     public virtual SocietyBuildingType? SocietyBuildingType { get; set; }
@@ -58,3 +59,4 @@ public partial class SocietyUserProfile
 
     public virtual ICollection<SocietyUserTimeSlot> SocietyUserTimeSlot { get; set; } = new List<SocietyUserTimeSlot>();
 }
+

@@ -41,5 +41,4 @@ public partial class SocietyFlat
 
     public virtual SocietyBuilding SocietyBuilding { get; set; } = null!;
     public virtual ICollection<SocietyUserFlatWorkingHistory> SocietyUserFlatWorkingHistory { get; set; } = new List<SocietyUserFlatWorkingHistory>();
-
 }

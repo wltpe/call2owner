@@ -43,5 +43,5 @@ public partial class EntityTypeDetail
 
     public virtual ICollection<SocietyUserDocumentUploaded> SocietyUserDocumentUploadeds { get; set; } = new List<SocietyUserDocumentUploaded>();
 
-    public virtual ICollection<SocietyUser> SocietyUsers { get; set; } = new List<SocietyUser>();
+    public virtual ICollection<SocietyUser> SocietyUser { get; set; } = new List<SocietyUser>();
 }
