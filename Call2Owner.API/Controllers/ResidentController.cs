@@ -3362,7 +3362,16 @@ namespace Call2Owner.Controllers
                     return NotFound(new { message = "User profile not found." });
                 }
 
+                var checkIsUserAlreadyWorking = _context.SocietyUserFlatWorkingHistory
+            .Any(d => d.IsDeleted != true
+             && d.SocietyUserProfileId == request.UserProfileId
+             && d.SocietyFlatId == getResidentIdByUserId.SocietyFlatId);
 
+
+                if (checkIsUserAlreadyWorking == true)
+                {
+                    return NotFound(new { message = "Daily Help already working in your appartment." });
+                }
 
 
                 var addSocietyUserFlatWorkingHistory = new AddSocietyUserFlatWorkingHistory
@@ -3384,26 +3393,24 @@ namespace Call2Owner.Controllers
                 _context.SocietyUserFlatWorkingHistory.Add(savedSocietyUserFlatWorkingHistory);
                 await _context.SaveChangesAsync();
 
-                //var addRe = new AddSocietyUserFlatWorkingHistory
-                //{
-                //    Id = Guid.NewGuid(),
-                //    SocietyUserProfileId = request.UserProfileId,
-                //    SocietyFlatId = getResidentIdByUserId.SocietyFlatId ?? Guid.Empty,
-                //    IsAddedByResident = true,
-                //    IsNotify = false,
-                //    Ratings = 0,
-                //    CreatedBy = currentUserId,
-                //    CreatedOn = DateTime.UtcNow
-                //};
+                var addResidentDailyHelp = new AddResidentDailyHelp
+                {
+                    Id = Guid.NewGuid(),
+                    ResidentId = getResidentIdByUserId.Id,
+                    SocietyUserFlatWorkingHistoryId = savedSocietyUserFlatWorkingHistory.Id,
+                    IsActive = true,
+                    CreatedBy = currentUserId,
+                    CreatedOn = DateTime.UtcNow
+                };
 
 
 
-                //var savedSocietyUserFlatWorkingHistory = _mapper.Map<SocietyUserFlatWorkingHistory>(addSocietyUserFlatWorkingHistory);
+                var savedResidentDailyHelp = _mapper.Map<ResidentDailyHelp>(addResidentDailyHelp);
 
-                //_context.SocietyUserFlatWorkingHistory.Add(savedSocietyUserFlatWorkingHistory);
-                //await _context.SaveChangesAsync();
+                _context.ResidentDailyHelp.Add(savedResidentDailyHelp);
+                await _context.SaveChangesAsync();
 
-                var resultDto = _mapper.Map<AddResidentFrequentEntriesDto>(savedSocietyUserFlatWorkingHistory);
+                var resultDto = _mapper.Map<ResidentDailyHelpDto>(savedResidentDailyHelp);
                 return Ok(resultDto);
             }
             catch (Exception ex)
@@ -3411,6 +3418,229 @@ namespace Call2Owner.Controllers
                 return StatusCode(500, new { message = "Server error", error = ex.Message });
             }
         }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Get)]
+        [HttpGet("get-all-resident-household-daily-help")]
+        public async Task<ActionResult> GetAllResidentHouseholdDailyHelp()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return NotFound(new
+                    {
+                        statusCode = StatusCodes.Status404NotFound,
+                        message = "Invalid or Expired Token."
+                    });
+                }
+
+                var getResidentByUserId = await _context.Resident
+                    .Where(s => s.IsDeleted != true && s.IsActive == true && s.UserId == Guid.Parse(currentUserId))
+                    .Select(s => s.Id)
+                    .FirstOrDefaultAsync();
+
+                if (getResidentByUserId == Guid.Empty)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                var result = await _context.SocietyUserProfile
+                    .Where(sp => sp.IsActive == true && (sp.IsDeleted != true || sp.IsDeleted == null))
+                    .SelectMany(sp => sp.SocietyUserFlatWorkingHistory
+                        .Where(sw => (sw.IsDeleted != true || sw.IsDeleted == null))
+                        .SelectMany(sw => sw.ResidentDailyHelp
+                            .Where(rdh => rdh.IsActive == true && (rdh.IsDeleted != true || rdh.IsDeleted == null) && rdh.ResidentId == getResidentByUserId)
+                            .Select(rdh => new
+                            {
+                                DailyHelpId = rdh.Id,
+                                UserProfileId = sp.Id,
+                                SocietyUserFlatWorkingId = sw.Id,
+                                sp.PhoneNumber,
+                                sp.Name,
+                                sp.ProfilePic,
+                                sw.IsNotify
+                            })
+                        )
+                    )
+                    .ToListAsync();
+
+                if (!result.Any())
+                {
+                    return Ok(new { message = "No daily help added." });
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred.", error = ex.Message });
+            }
+        }
+
+
+        [Authorize(Policy = Utilities.Module.Resident)]
+        [Authorize(Policy = Utilities.Permission.Update)]
+        [HttpPost("Update-resident-daily-help-by-id")]
+        public async Task<IActionResult> UpdateResidentDailyHelp([FromForm] UpdateResidentDailyHelpSelectedRecord request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized(new { message = "Invalid or expired token." });
+                }
+
+                var getResident = await _context.Resident
+                    .Where(d => d.IsDeleted != true && d.IsActive == true && d.UserId == Guid.Parse(currentUserId))
+                    .Select(d => new { d.Id, d.SocietyFlatId })
+                    .FirstOrDefaultAsync();
+
+                if (getResident == null)
+                {
+                    return NotFound(new { message = "Resident not found." });
+                }
+
+                var societyUserRoleId = await _context.Role
+                    .Where(r => r.RoleName.Contains("SocietyUser"))
+                    .Select(r => r.Id)
+                    .FirstOrDefaultAsync();
+
+                if (societyUserRoleId == null)
+                {
+                    return NotFound(new { message = "SocietyUser role not found." });
+                }
+
+                var verifyUserProfileId = await (
+                    from d in _context.SocietyUserProfile
+                    join e in _context.SocietyUser on d.SocietyUserId equals e.Id
+                    join f in _context.User on e.SocietyUserId equals f.UserName
+                    join g in _context.Role on f.RolesId equals g.Id
+                    where (d.IsDeleted == false || d.IsDeleted == null)
+                          && d.IsActive == true
+                          && (e.IsDeleted == false || e.IsDeleted == null)
+                          && e.IsActive == true
+                          && (f.IsDeleted == false || f.IsDeleted == null)
+                          && f.IsActive == true
+                          && f.Role == "admin"
+                          && g.ParentRoleId == societyUserRoleId
+                          && d.Id == request.UserProfileId
+                    select new { d.Id }
+                ).FirstOrDefaultAsync();
+
+                if (verifyUserProfileId == null)
+                {
+                    return NotFound(new { message = "User profile not found." });
+                }
+
+                var checkTimeSlot = await (
+                    from d in _context.SocietyUserTimeSlot
+                    join g in _context.SocietyUserFlatWorkingHistory
+                        on d.SocietyUserProfileId equals g.SocietyUserProfileId
+                    where d.IsActive == true
+                        && d.SocietyUserProfileId == request.UserProfileId
+                        && g.Id == request.SocietyUserFlatWorkingId
+                    select d
+                ).FirstOrDefaultAsync();
+
+                if (checkTimeSlot == null)
+                {
+                    return NotFound(new { message = "No time slot record found." });
+                }
+
+                // Compare JSON time slots
+                var oldList = JsonConvert.DeserializeObject<List<TimeSlot>>(string.IsNullOrWhiteSpace(checkTimeSlot.AllowedTimeSlotJson) ? "[]" : checkTimeSlot.AllowedTimeSlotJson);
+                var newList = JsonConvert.DeserializeObject<List<TimeSlot>>(string.IsNullOrWhiteSpace(request.AllowedTimeSlotJson) ? "[]" : request.AllowedTimeSlotJson);
+
+                bool areCompletelyEqual = oldList.Count == newList.Count &&
+                    !oldList.Where((oldItem, index) =>
+                        oldItem.id != newList[index].id ||
+                        oldItem.start != newList[index].start ||
+                        oldItem.end != newList[index].end ||
+                        oldItem.isActive != newList[index].isActive
+                    ).Any();
+
+                bool areSameExceptIsActive = oldList.Count == newList.Count &&
+                    !oldList.Where((oldItem, index) =>
+                        oldItem.id != newList[index].id ||
+                        oldItem.start != newList[index].start ||
+                        oldItem.end != newList[index].end
+                    ).Any();
+
+                int resultCode = areCompletelyEqual ? 0 : (areSameExceptIsActive ? 1 : 2);
+                if (resultCode == 2)
+                    return NotFound(new { message = "AllowedTimeSlotJson requires all objects to match." });
+
+                var workingHistory = await _context.SocietyUserFlatWorkingHistory
+                    .FirstOrDefaultAsync(d => d.Id == request.SocietyUserFlatWorkingId);
+
+                if (workingHistory == null || workingHistory.IsDeleted == true)
+                {
+                    return NotFound(new { message = "Daily Help record not found or already removed." });
+                }
+
+                if (request.Ratings != null && (request.Ratings < 1 || request.Ratings > 5))
+                {
+                    return BadRequest(new { message = "Rating should be between 1 to 5." });
+                }
+
+                // ✅ Update working history directly
+                workingHistory.IsNotify = request.IsNotify ?? workingHistory.IsNotify;
+                workingHistory.Ratings = request.Ratings ?? workingHistory.Ratings;
+                workingHistory.UpdatedBy = currentUserId;
+                workingHistory.UpdatedOn = DateTime.UtcNow;
+                workingHistory.IsDeleted = request.IsDeleted ?? workingHistory.IsDeleted;
+                workingHistory.DeletedBy = request.IsDeleted.HasValue ? currentUserId : workingHistory.DeletedBy;
+                workingHistory.DeletedOn = request.IsDeleted.HasValue ? DateTime.UtcNow : workingHistory.DeletedOn;
+
+                // ✅ Update time slot directly
+                checkTimeSlot.AllowedTimeSlotJson = !string.IsNullOrEmpty(request.AllowedTimeSlotJson)
+                    ? request.AllowedTimeSlotJson
+                    : checkTimeSlot.AllowedTimeSlotJson;
+
+                checkTimeSlot.UpdatedBy = currentUserId;
+                checkTimeSlot.UpdatedOn = DateTime.UtcNow;
+
+                // ✅ Update daily help if isActive changed
+               
+                    var dailyHelp = await _context.ResidentDailyHelp
+                        .FirstOrDefaultAsync(d =>
+                            d.ResidentId == getResident.Id &&
+                            d.SocietyUserFlatWorkingHistoryId == workingHistory.Id &&
+                            d.IsActive == true &&
+                            (d.IsDeleted == false || d.IsDeleted == null)
+                        );
+
+                    if (dailyHelp == null)
+                    {
+                        return NotFound(new { message = "Daily help record not found." });
+                    }
+
+                    dailyHelp.IsActive = request.IsDeleted.HasValue ? !request.IsDeleted.Value : dailyHelp.IsActive;
+                    dailyHelp.IsDeleted = request.IsDeleted ?? dailyHelp.IsDeleted;
+                    dailyHelp.UpdatedBy = currentUserId;
+                    dailyHelp.UpdatedOn = DateTime.UtcNow;
+                    dailyHelp.IsDeleted = request.IsDeleted.HasValue ? request.IsDeleted : dailyHelp.IsDeleted;
+                    dailyHelp.DeletedBy = request.IsDeleted.HasValue ? currentUserId : dailyHelp.DeletedBy;
+                    dailyHelp.DeletedOn = request.IsDeleted.HasValue ? DateTime.UtcNow : dailyHelp.DeletedOn;
+                
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Daily Help updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", error = ex.Message });
+            }
+        }
+
+
 
         #endregion
 
@@ -4847,6 +5077,91 @@ namespace Call2Owner.Controllers
 
         public int? Ratings { get; set; }
 
+    }
+
+    public class UpdateResidentDailyHelpSelectedRecord
+    {
+        public Guid DailyHelpId { get; set; }
+        public Guid UserProfileId { get; set; }
+        public Guid SocietyUserFlatWorkingId { get; set; }
+        public string? AllowedTimeSlotJson { get; set; }
+        public bool? IsDeleted { get; set; }
+        public bool? IsNotify { get; set; }
+        public int? Ratings { get; set; }
+
+    }
+
+    public class UpdateSocietyUserFlatWorkingHistory
+     {
+        public Guid Id { get; set; }
+
+        public Guid SocietyUserProfileId { get; set; }
+
+        public Guid SocietyFlatId { get; set; }
+
+        public bool IsAddedByResident { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+
+        public bool IsNotify { get; set; }
+
+        public int? Ratings { get; set; }
+
+    }
+    public class UpdateSocietyUserTimeSlot
+    {
+        public Guid Id { get; set; }
+
+        public Guid SocietyUserProfileId { get; set; }
+        public string? AllowedTimeSlotJson { get; set; }
+
+        public bool? IsActive { get; set; }
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
+    }
+    public class UpdateResidentDailyHelp
+    {
+        public Guid Id { get; set; }
+
+        public Guid ResidentId { get; set; }
+
+        public Guid SocietyUserFlatWorkingHistoryId { get; set; }
+        public bool? IsActive { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CreatedOn { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedOn { get; set; }
+
+        public bool? IsDeleted { get; set; }
+
+        public string? DeletedBy { get; set; }
+
+        public DateTime? DeletedOn { get; set; }
     }
 
     #endregion
