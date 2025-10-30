@@ -108,6 +108,8 @@ public partial class DataContext : DbContext
 
     public virtual DbSet<SocietyUserTimeSlot> SocietyUserTimeSlot { get; set; }
 
+    public virtual DbSet<SocietyEntries> SocietyEntries { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AdminWallet>(entity =>

@@ -3,9 +3,12 @@ using Azure;
 using Call2Owner.DTO;
 using Call2Owner.Models;
 using Call2Owner.Services;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -21,6 +24,7 @@ using System;
 using System.Buffers;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
+using System.Data;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.Globalization;
@@ -35,12 +39,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Utilities;
+using static Call2Owner.Controllers.SocietyUserController;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static System.Net.WebRequestMethods;
-using Dapper;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 namespace Call2Owner.Controllers
 {
@@ -145,7 +146,7 @@ namespace Call2Owner.Controllers
                     return Ok(new
                     {
                         statusCode = StatusCodes.Status200OK,
-                        message = "Resident already registered."
+                        message = "User already registered in society."
                     });
                 }
 
@@ -172,7 +173,7 @@ namespace Call2Owner.Controllers
                 return Ok(new
                 {
                     statusCode = StatusCodes.Status200OK,
-                    message = "Resident created successfully!"
+                    message = "User registered successfully in society!"
                 });
             }
             catch (Exception ex)
@@ -180,7 +181,7 @@ namespace Call2Owner.Controllers
                 return BadRequest(new
                 {
                     statusCode = StatusCodes.Status400BadRequest,
-                    message = "An error occurred while registering the resident."
+                    message = "An error occurred while registering the user."
                 });
             }
         }
@@ -2334,11 +2335,11 @@ namespace Call2Owner.Controllers
                         return NotFound(new { message = "Is Private Entry required?" });
 
 
-                    if (string.IsNullOrWhiteSpace(obj.StartDate))
-                        return NotFound(new { message = "Start date required." });
+                    if (string.IsNullOrWhiteSpace(obj.SelectDate))
+                        return NotFound(new { message = "Select date required." });
 
-                    if (!CheckValidDate(obj.StartDate))
-                        return NotFound(new { message = "Start date must be in 'dd-MM-yyyy' format." });
+                    if (!CheckValidDate(obj.SelectDate))
+                        return NotFound(new { message = "Select date must be in 'dd-MM-yyyy' format." });
                   
 
                     if (string.IsNullOrWhiteSpace(obj.StartingFrom))
@@ -2527,15 +2528,23 @@ namespace Call2Owner.Controllers
                 }
 
 
-                if (obj.GuestType == "Once")
+                 if (obj.GuestType == "Once")
                 {
 
-                    if (!obj.IsPrivateEntry == true || !obj.IsPrivateEntry == false)
-                        return NotFound(new { message = "Is Private Entry?" });
+                
+
+                    if (obj.IsPrivateEntry != null && (obj.IsPrivateEntry == true || obj.IsPrivateEntry == false))
+                    {
+                        // ✅ IsPrivateEntry has a value (true or false)
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "IsPrivateEntry is required." });
+                    }
 
 
-                    if (!obj.StartDate.HasValue)
-                        return NotFound(new { message = "Start date required." });
+                    if (!obj.SelectDate.HasValue)
+                        return NotFound(new { message = "Select date required." });
 
 
                     if (!obj.StartingFrom.HasValue)
@@ -3641,6 +3650,111 @@ namespace Call2Owner.Controllers
         }
 
 
+
+        #endregion
+
+        #region Entries APIs
+
+
+        [HttpPost("Resident-Entry-Approve-Deny")]
+        public async Task<IActionResult> ApproveOrDeny([FromBody] ApproveOrDenyRequest request)
+        {
+            if (request == null || request.SocietyUserId == Guid.Empty)
+                return BadRequest("Invalid request.");
+
+            // Find the SocietyUser
+            var societyUser = await _context.SocietyUser
+                .FirstOrDefaultAsync(su => su.Id == request.SocietyUserId);
+
+            if (societyUser == null)
+                return NotFound("Society user not found.");
+
+            // Apply logic based on action
+            var now = DateTime.UtcNow;
+
+            if (request.Action.Equals("Approve", StringComparison.OrdinalIgnoreCase))
+            {
+                societyUser.IsApproved = true;
+                societyUser.ApprovedBy = request.PerformedBy;
+                societyUser.ApprovedOn = now;
+                societyUser.IsActive = true;
+            }
+            else if (request.Action.Equals("Deny", StringComparison.OrdinalIgnoreCase))
+            {
+                societyUser.IsApproved = false;
+                societyUser.ApprovedBy = request.PerformedBy;
+                societyUser.ApprovedOn = now;
+                societyUser.IsActive = false;
+                //   societyUser.Remarks = request.Remarks ?? "Denied";
+            }
+            else
+            {
+                return BadRequest("Invalid action. Use 'Approve' or 'Deny'.");
+            }
+
+            _context.SocietyUser.Update(societyUser);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = $"Society user has been {request.Action.ToLower()}d successfully.",
+                societyUser.Id,
+                societyUser.IsApproved,
+                societyUser.ApprovedBy,
+                societyUser.ApprovedOn
+            });
+        }
+
+
+        [HttpGet("Resident-Get-All-Entries")]
+        public async Task<IActionResult> GetResidentEntries(Guid SocietyFlatId)
+        {
+            // Ensure resident exists
+            var resident = await _context.Resident
+                .Include(r => r.User)
+                .Include(r => r.SocietyFlat)
+                    .ThenInclude(sf => sf.Society)
+                .FirstOrDefaultAsync(r => r.Id == SocietyFlatId);
+
+            if (resident == null)
+                return NotFound("Resident not found.");
+
+            // Get all entry logs (assuming ResidentEntry or similar table)
+            var entries = await _context.SocietyEntries
+                .Where(e => e.SocietyFlatId == SocietyFlatId)
+                .Include(e => e.SocietyFlatId) // if you store guard as User
+                .OrderByDescending(e => e.EntryRegisterOn)
+                .Select(e => new ResidentEntryResponse
+                {
+                    EntryId = e.Id,
+                    ResidentId = e.SocietyFlatId,
+
+                    // 🧍 Resident Info
+                    Name = string.Join(" ", new[] {
+                    resident.User.FirstName,
+                    string.IsNullOrWhiteSpace(resident.User.MiddleName) ? null : resident.User.MiddleName,
+                    string.IsNullOrWhiteSpace(resident.User.LastName) ? null : resident.User.LastName
+                    }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                    PhoneNumber = resident.User.PhoneNumber,
+                    ProfilePicture = resident.User.ProfileImage,
+
+                    // 🏢 Company Info
+                    CompanyName = "",//resident.SocietyFlat.Society.CompanyName,
+                    CompanyLogo = "", //resident.SocietyFlat.Society.CompanyLogo,
+
+                    // 🚪 Entry Info
+                    CurrentStatus = "", //e.Status,       // Coming / Inside / Left / Removed
+                    EntryTime = e.EntryRegisterOn,
+                    ExitTime = e.OutOn,
+
+                    // ✅ Approval / Guard Info
+                    ApprovalStatus = "", //e.ApprovalStatus, // Allowed / PreApproved / Cancelled
+                    GuardName = "" // e.GuardUser != null ? e.GuardUser.FirstName + " " + e.GuardUser.LastName  : null
+                })
+                .ToListAsync();
+
+            return Ok(entries);
+        }
 
         #endregion
 
@@ -5162,6 +5276,42 @@ namespace Call2Owner.Controllers
         public string? DeletedBy { get; set; }
 
         public DateTime? DeletedOn { get; set; }
+    }
+
+    #endregion
+
+    #region EntriesModel
+
+    public class ApproveOrDenyRequest
+    {
+        public Guid SocietyUserId { get; set; }
+        public string Action { get; set; } // "Approve" or "Deny"
+        public string? PerformedBy { get; set; } // e.g., Admin username
+        public string? Remarks { get; set; } // optional reason for denial
+    }
+
+    public class ResidentEntryResponse
+    {
+        public Guid EntryId { get; set; }
+        public Guid ResidentId { get; set; }
+
+        // Resident info
+        public string? Name { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? ProfilePicture { get; set; }
+
+        // Company info
+        public string? CompanyName { get; set; }
+        public string? CompanyLogo { get; set; }
+
+        // Entry status
+        public string? CurrentStatus { get; set; } // Coming / Inside / Left / Removed
+        public DateTime? EntryTime { get; set; }
+        public DateTime? ExitTime { get; set; }
+
+        // Approval / Guard info
+        public string? ApprovalStatus { get; set; } // Allowed / PreApproved / Cancelled
+        public string? GuardName { get; set; }
     }
 
     #endregion

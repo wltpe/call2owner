@@ -1,4 +1,4 @@
-using Call2Owner;
+﻿using Call2Owner;
 using Call2Owner.API;
 using Call2Owner.Controllers;
 using Call2Owner.Models;
@@ -30,34 +30,35 @@ var publicEndpoints = new HashSet<string>
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ Application Insights
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     builder.Configuration.Bind("ApplicationInsights", options);
 });
 
-// Add services to the container.
+// ✅ CORS Configuration
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: "AllowOrigin",
-        builder =>
-        {
-            builder.WithOrigins("https://localhost:44351", "http://112.196.3.222:8081")
-                                .AllowAnyHeader()
-                                .AllowAnyMethod();
-        });
+    options.AddPolicy("AllowOrigin", policy =>
+    {
+        policy.WithOrigins("https://localhost:44351", "http://112.196.3.222:8081")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
-
+// ✅ Database
 builder.Services.AddDbContext<DataContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
+// ✅ Mail Config
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 
-var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"] ?? throw new InvalidOperationException("JWT Secret Key not found!"));
-
-
+// ✅ JWT Configuration
+var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]
+    ?? throw new InvalidOperationException("JWT Secret Key not found!"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -67,25 +68,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
+            IssuerSigningKey = new SymmetricSecurityKey(key),
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
 
-        // Prevent ASP.NET from renaming claim types
         options.MapInboundClaims = false;
 
-        // Explicitly map "Permissions" into claims
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = ctx =>
             {
                 var permissions = ctx.Principal?.FindFirst("Permissions")?.Value;
 
-                // If token contains Permissions claim in raw JSON payload
                 if (permissions == null &&
                     ctx.SecurityToken is System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken &&
                     jwtToken.Payload.TryGetValue("Permissions", out var permsObj))
@@ -97,56 +94,45 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             }
         };
-
         options.SaveToken = true;
     });
 
-
+// ✅ Custom Services
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<NotificationService>(); // ✅ Add NotificationService
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 
+// ✅ Authorization setup
 builder.Services.AddAuthorization(options =>
 {
-    // Get all public constants from ModulePermissions
     var modules = typeof(Utilities.Module)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-        .Where(fi => fi.IsLiteral && !fi.IsInitOnly) // Ensures it's a constant
-        .Select(fi => fi.GetValue(null)?.ToString()) // Get the value of the constant
-        .Where(value => !string.IsNullOrEmpty(value)) // Ensure it's not null or empty
+        .Where(fi => fi.IsLiteral && !fi.IsInitOnly)
+        .Select(fi => fi.GetValue(null)?.ToString())
+        .Where(value => !string.IsNullOrEmpty(value))
         .ToList();
 
-    // Add each permission as a policy
     foreach (var item in modules)
-    {
-        options.AddPolicy(item, policy =>
-            policy.Requirements.Add(new PermissionRequirement(item)));
-    }
+        options.AddPolicy(item, policy => policy.Requirements.Add(new PermissionRequirement(item)));
 
-    // Get all public constants from ModulePermissions
     var permissions = typeof(Utilities.Permission)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-        .Where(fi => fi.IsLiteral && !fi.IsInitOnly) // Ensures it's a constant
-        .Select(fi => fi.GetValue(null)?.ToString()) // Get the value of the constant
-        .Where(value => !string.IsNullOrEmpty(value)) // Ensure it's not null or empty
+        .Where(fi => fi.IsLiteral && !fi.IsInitOnly)
+        .Select(fi => fi.GetValue(null)?.ToString())
+        .Where(value => !string.IsNullOrEmpty(value))
         .ToList();
 
-    // Add each permission as a policy
     foreach (var permission in permissions)
-    {
-        options.AddPolicy(permission, policy =>
-            policy.Requirements.Add(new PermissionRequirement(permission)));
-    }
+        options.AddPolicy(permission, policy => policy.Requirements.Add(new PermissionRequirement(permission)));
 });
 
+// ✅ Swagger Config
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Call2Owner.API", Version = "v1" });
-
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -156,90 +142,86 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Description = "Enter 'Bearer {token}' (without quotes)"
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
                 Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             Array.Empty<string>()
         }
     });
 });
 
-// Register the PermissionRequirement handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-
 builder.Services.AddSingleton<IEmailServiceClient, EmailServiceClient>();
 builder.Services.AddScoped<IEmailTriggerService, EmailTriggerService>();
 builder.Services.AddSingleton(sp => new RestClient());
 
+// ✅ Build app
 var app = builder.Build();
 
+// ✅ Initialize Firebase safely
+try
+{
+    FirebaseInitializer.InitializeFirebase();
+    Console.WriteLine("✅ Firebase initialized successfully.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine("❌ Firebase initialization failed: " + ex.Message);
+}
+
+// ✅ Seed initial data
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<DataContext>();
     DbSeeder.SeedIfNotExists(context);
 }
 
+// ✅ CORS middleware
 app.UseCors(options => options.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 
-// Configure the HTTP request pipeline.
+// ✅ Swagger setup
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
-    // Shows UseCors with CorsPolicyBuilder.
-    app.UseCors(builder =>
-    {
-        builder
-        .AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader();
-    });
+    app.UseCors("AllowOrigin");
     app.UseSwagger();
-
     app.UseSwaggerUI();
 }
 
+// ✅ Seed Super Admin
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<DataContext>();
     await AuthController.SeedSuperAdminAsync(dbContext);
 }
 
+// ✅ Middleware
 app.UseHttpsRedirection();
-
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "Images")),
+    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Images")),
     RequestPath = "/Images"
 });
 
-// Authentication must come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ✅ Public endpoint bypass
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower();
-
     if (publicEndpoints.Contains(path))
     {
-        // Mark as authenticated for public endpoints
-        context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
+        context.User = new ClaimsPrincipal(new ClaimsIdentity());
         await next();
         return;
     }
-
     await next();
 });
 
 app.MapControllers();
-
 app.Run();
